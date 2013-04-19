@@ -106,7 +106,7 @@ static void showscoresheet(void)
 	else
 	    printf("   %s", slotnames[n]);
 	if (controls[i].value >= 0 &&
-			(controls[i].disabled || controls[i].set))
+			(isdisabled(controls[i]) || isselected(controls[i])))
 	    printf("%4d  .  ", controls[i].value);
 	else
 	    printf("      .  ");
@@ -116,7 +116,7 @@ static void showscoresheet(void)
 	else
 	    printf("   %s", slotnames[m + n]);
 	if (controls[i].value >= 0 &&
-			(controls[i].disabled || controls[i].set))
+			(isdisabled(controls[i]) || isselected(controls[i])))
 	    printf("%4d", controls[i].value);
 	putchar('\n');
     }
@@ -143,7 +143,7 @@ static void showprompt(void)
     if (displaydice)
 	showdice();
     if (controls[ctl_button].value == bval_score &&
-			!controls[ctl_button].disabled) {
+			!isdisabled(controls[ctl_button])) {
 	printf("Confirm (RET):\n");
 	return;
     }
@@ -152,7 +152,7 @@ static void showprompt(void)
 	printf("Roll (abcde) or ");
     printf("Score (");
     for (i = ctl_slots ; i < ctl_slots_end ; ++i)
-	if (!controls[i].disabled)
+	if (!isdisabled(controls[i]))
 	    putchar(controls[i].key);
     printf("):\n");
 }
@@ -221,7 +221,7 @@ static int processinput(char const *str, int length)
     int i, n;
 
     if (length == 0) {
-	if (controls[ctl_button].disabled) {
+	if (isdisabled(controls[ctl_button])) {
 	    printf("Enter (?) for help.\n");
 	    return 0;
 	}
@@ -236,7 +236,7 @@ static int processinput(char const *str, int length)
     for (p = str ; *p ; ++p) {
 	for (i = ctl_dice ; i < ctl_dice_end ; ++i) {
 	    if (controls[i].key == tolower(*p)) {
-		if (controls[i].disabled) {
+		if (isdisabled(controls[i])) {
 		    printf("Cannot roll dice.\n");
 		    return 0;
 		}
@@ -261,7 +261,7 @@ static int processinput(char const *str, int length)
 
     for (i = ctl_slots ; i < ctl_slots_end ; ++i) {
 	if (controls[i].key == tolower(*str)) {
-	    if (controls[i].disabled) {
+	    if (isdisabled(controls[i])) {
 		printf("Slot not available.\n");
 		return 0;
 	    }
@@ -296,29 +296,21 @@ int text_initializeio(void)
     return 1;
 }
 
-/* A placeholder; rendering is actually done in text_getinputevent().
- */
-void text_render(void)
-{
-    return;
-}
-
 /* Display changes to the state and return the next input event from
  * the queue.
  */
-int text_getinputevent(int *control, int *action)
+int text_runio(int *control)
 {
     char buf[8];
     int ch, i, n;
 
     for (;;) {
 	if (unqueueinputevent(control)) {
-	    *action = act_clicked;
 	    displaydice = 1;
 	    return 1;
 	}
 	for (i = ctl_slots ; i < ctl_slots_end ; ++i) {
-	    n = controls[i].disabled || controls[i].set;
+	    n = isdisabled(controls[i]) || isselected(controls[i]);
 	    if (lastvalues[i] != n) {
 		lastvalues[i] = n;
 		displayscore = 1;

@@ -135,7 +135,7 @@ static void copypip(SDL_Surface *image, int xpos, int ypos,
 
 /* Create the 12 faces (6 selected, 6 unselected) of a die control.
  */
-static void renderdieimages(void)
+static void renderdieimages(SDL_Color bkgnd)
 {
     static unsigned char const pippos[6][6][2] = {
 	{ { 1, 1 }, { 9, 9 }, { 9, 9 }, { 9, 9 }, { 9, 9 }, { 9, 9 } },
@@ -146,7 +146,7 @@ static void renderdieimages(void)
 	{ { 0, 0 }, { 2, 0 }, { 0, 1 }, { 2, 1 }, { 0, 2 }, { 2, 2 } },
     };
 
-    SDL_Surface *grayness, *image;
+    SDL_Surface *image, *imagecopy, *blank, *grayness;
     SDL_Rect rect;
     Uint8 *pip;
     int pos[3];
@@ -159,6 +159,10 @@ static void renderdieimages(void)
 				 0x000000FF, 0x0000FF00,
 				 0x00FF0000, 0xFF000000);
     drawroundedrect(image, radius + 1);
+
+    blank = SDL_CreateRGBSurface(SDL_SWSURFACE, diesize, diesize, 32,
+				 0x0000FF, 0x00FF00, 0xFF0000, 0);
+    SDL_FillRect(blank, NULL, bkgnd.r | (bkgnd.g << 8) | (bkgnd.b << 16));
 
     grayness = SDL_CreateRGBSurface(SDL_SWSURFACE, diesize, diesize, 32,
 				    0x000000FF, 0x0000FF00,
@@ -181,12 +185,17 @@ static void renderdieimages(void)
 	for (j = 0 ; j <= i ; ++j)
 	    copypip(image, pos[pippos[i][j][0]], pos[pippos[i][j][1]],
 		    pip, pipsize, pipsize);
-	dieimages[i] = SDL_DisplayFormatAlpha(image);
-	dieimages[i + 6] = SDL_DisplayFormatAlpha(image);
-	SDL_BlitSurface(grayness, NULL, dieimages[i + 6], NULL);
+	dieimages[i] = SDL_DisplayFormat(blank);
+	dieimages[i + 6] = SDL_DisplayFormat(blank);
+	imagecopy = SDL_DisplayFormatAlpha(image);
+	SDL_BlitSurface(imagecopy, NULL, dieimages[i], NULL);
+	SDL_BlitSurface(grayness, NULL, imagecopy, NULL);
+	SDL_BlitSurface(imagecopy, NULL, dieimages[i + 6], NULL);
+	SDL_FreeSurface(imagecopy);
     }
     free(pip);
     SDL_FreeSurface(image);
+    SDL_FreeSurface(blank);
     SDL_FreeSurface(grayness);
 }
 
@@ -198,7 +207,7 @@ int updatedie(struct sdlcontrol *ctl)
     int state;
 
     state = ctl->control->value;
-    if (ctl->control->set)
+    if (isselected(*ctl->control))
 	state += 6;
     if (ctl->state == state)
 	return 0;
@@ -208,10 +217,10 @@ int updatedie(struct sdlcontrol *ctl)
 
 /* Initialize the given control as a die.
  */
-int makedie(struct sdlcontrol *ctl)
+int makedie(struct sdlcontrol *ctl, SDL_Color bkgnd)
 {
     if (!dieimages[0])
-	renderdieimages();
+	renderdieimages(bkgnd);
     ctl->images = dieimages;
     ctl->state = -1;
     return 1;

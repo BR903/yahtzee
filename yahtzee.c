@@ -12,14 +12,17 @@
 #include "scoring.h"
 #include "io.h"
 
+/* Macros for changing the control flags.
+ */
+#define setselected(control)	((control).flags |= ctlflag_selected)
+#define clearselected(control)	((control).flags &= ~ctlflag_selected)
+#define flipselected(control)	((control).flags ^= ctlflag_selected)
+#define setdisabled(control)	((control).flags |= ctlflag_disabled)
+#define cleardisabled(control)	((control).flags &= ~ctlflag_disabled)
+
 /* The array of I/O controls.
  */
 struct control controls[ctl_count];
-
-/* A pointer to the currently selected slot, or null if no slot is
- * selected.
- */
-struct control *selected = 0;
 
 /*
  * I/O control management.
@@ -33,9 +36,8 @@ static void initcontrols(void)
 
     for (i = 0 ; i < ctl_count ; ++i) {
 	controls[i].value = -1;
-	controls[i].disabled = 0;
-	controls[i].set = 0;
-	controls[i].hovering = 0;
+	cleardisabled(controls[i]);
+	clearselected(controls[i]);
     }
 
     controls[ctl_die_0].key = 'a';
@@ -66,24 +68,26 @@ static void rollalldice(void)
     int i;
 
     for (i = ctl_dice ; i < ctl_dice_end ; ++i) {
-	controls[i].disabled = 0;
-	controls[i].set = 0;
+	cleardisabled(controls[i]);
+	clearselected(controls[i]);
 	controls[i].value = (int)((rand() * 6.0) / (double)RAND_MAX);
     }
+    updateopenslots();
 }
 
-/* Reroll the dice that are currently set.
+/* Reroll the dice that are currently selected.
  */
 static void rolldice(void)
 {
     int i;
 
     for (i = ctl_dice ; i < ctl_dice_end ; ++i) {
-	if (controls[i].set) {
+	if (isselected(controls[i])) {
+	    clearselected(controls[i]);
 	    controls[i].value = (int)((rand() * 6.0) / (double)RAND_MAX);
-	    controls[i].set = 0;
 	}
     }
+    updateopenslots();
 }
 
 /* Mark the dice as fixed.
@@ -93,7 +97,7 @@ static void fixdice(void)
     int i;
 
     for (i = ctl_dice ; i < ctl_dice_end ; ++i)
-	controls[i].disabled = 1;
+	setdisabled(controls[i]);
 }
 
 /* Erase the scores in all of the slots.
@@ -102,38 +106,14 @@ static void clearallslots(void)
 {
     int i;
 
-    selected = 0;
     for (i = ctl_slots ; i < ctl_slots_end ; ++i) {
 	controls[i].value = -1;
-	controls[i].set = controls[i].key == 0;
+	clearselected(controls[i]);
+	if (controls[i].key)
+	    cleardisabled(controls[i]);
+	else
+	    setdisabled(controls[i]);
     }
-}
-
-/* Reset the scores of the open slots.
- */
-static void resetslots(void)
-{
-    int i;
-
-    for (i = ctl_slots ; i < ctl_slots_end ; ++i)
-	if (!controls[i].set)
-	    controls[i].value = -1;
-}
-
-/* Simulate a brief button press.
- */
-static void flashbutton(void)
-{
-    static struct timespec const wait = { 0, 100000000 };
-    struct control saved;
-
-    saved = controls[ctl_button];
-    controls[ctl_button].hovering = 1;
-    controls[ctl_button].set = 1;
-    render();
-    nanosleep(&wait, 0);
-    controls[ctl_button] = saved;
-    render();
 }
 
 /*
@@ -147,129 +127,107 @@ static void flashbutton(void)
 static int playgame(void)
 {
     struct control *control;
+    struct control *selectedslot;
     int slotopencount, rollcount;
-    int ctl, act, i;
+    int ctl, i;
 
     clearallslots();
     rollalldice();
     rollcount = 1;
     controls[ctl_button].value = bval_roll;
-    controls[ctl_button].disabled = 1;
+    setdisabled(controls[ctl_button]);
 
     for (;;) {
+	selectedslot = 0;
 	slotopencount = 0;
-	for (i = ctl_slots ; i < ctl_slots_end ; ++i)
-	    if (!controls[i].set)
+	for (i = ctl_slots ; i < ctl_slots_end ; ++i) {
+	    if (!isdisabled(controls[i]))
 		++slotopencount;
+	    if (isselected(controls[i]))
+		selectedslot = &controls[i];
+	}
 	if (slotopencount == 0) {
 	    updatescores();
 	    break;
 	}
-	if (rollcount == 3 || selected) {
+	if (rollcount == 3 || selectedslot) {
 	    controls[ctl_button].value = bval_score;
-	    controls[ctl_button].disabled = !selected;
+	    if (selectedslot)
+		cleardisabled(controls[ctl_button]);
+	    else
+		setdisabled(controls[ctl_button]);
 	    if (rollcount == 3)
 		fixdice();
 	} else {
 	    controls[ctl_button].value = bval_roll;
-	    controls[ctl_button].disabled = 1;
+	    setdisabled(controls[ctl_button]);
 	    for (i = ctl_dice ; i < ctl_dice_end ; ++i)
-		if (controls[i].set)
-		    controls[ctl_button].disabled = 0;
+		if (isselected(controls[i]))
+		    cleardisabled(controls[ctl_button]);
 	}    
-
-	render();
 
 	getnextevent:
 	if (rollcount == 3 && slotopencount == 1) {
-	    if (selected) {
+	    if (selectedslot) {
 		ctl = ctl_button;
-		act = act_clicked;
 	    } else {
 		for (i = ctl_slots ; i < ctl_slots_end ; ++i) {
-		    if (!controls[i].set) {
+		    if (!isdisabled(controls[i])) {
 			ctl = i;
-			act = act_clicked;
 			break;
 		    }
 		}
 	    }
 	} else {
-	    if (!getinputevent(&ctl, &act))
+	    if (!runio(&ctl))
 		return 0;
 	}
 	control = &controls[ctl];
-	if (control->disabled)
+	if (isdisabled(*control))
 	    goto getnextevent;
-	if (act == act_over) {
-	    for (i = 0 ; i < ctl_count ; ++i)
-		controls[i].hovering = 0;
-	    control->hovering = 1;
-	} else if (act == act_out) {
-	    control->hovering = 0;
-	}
 
 	if (ctl >= ctl_dice && ctl < ctl_dice_end) {
 	    if (rollcount == 3)
 		goto getnextevent;
-	    if (act == act_down || act == act_clicked) {
-		control->set = !control->set;
-		if (selected) {
-		    selected = 0;
-		    updatescores();
-		}
+	    flipselected(*control);
+	    if (selectedslot) {
+		clearselected(*selectedslot);
+		updatescores();
 	    }
 	    continue;
 	}
 
 	if (ctl >= ctl_slots && ctl < ctl_slots_end) {
-	    if (control->set)
+	    if (isdisabled(*control))
 		goto getnextevent;
-	    if (act == act_down || act == act_clicked) {
-		selected = selected == control ? 0 : control;
-		for (i = ctl_dice ; i < ctl_dice_end ; ++i)
-		    controls[i].set = 0;
-	    }
-	    if (control->value == -1)
-		control->value = scorevalue(ctl);
+	    setselected(*control);
+	    if (selectedslot)
+		clearselected(*selectedslot);
+	    for (i = ctl_dice ; i < ctl_dice_end ; ++i)
+		clearselected(controls[i]);
 	    updatescores();
 	    continue;
 	}
 
 	if (ctl == ctl_button) {
-	    if (act == act_down) {
-		control->set = 1;
-	    } else if (act == act_up) {
-		control->set = 0;
-		if (control->hovering)
-		    act = act_clicked;
-	    } else if (act == act_clicked) {
-		flashbutton();
-	    }
-	    if (act != act_clicked)
-		continue;
-
 	    if (control->value == bval_score) {
-		if (!selected) {
-		    control->disabled = 1;
+		if (!selectedslot) {
+		    setdisabled(*control);
 		    goto getnextevent;
 		}
-		selected->set = 1;
-		selected = 0;
+		setdisabled(*selectedslot);
+		clearselected(*selectedslot);
 		if (slotopencount > 1) {
 		    rollalldice();
 		    rollcount = 1;
-		    resetslots();
 		}
 	    } else {
 		if (rollcount == 3) {
-		    control->disabled = 1;
+		    setdisabled(*control);
 		    goto getnextevent;
 		}
-		selected = 0;
 		rolldice();
 		++rollcount;
-		resetslots();
 	    }
 	    continue;
 	}
@@ -283,35 +241,15 @@ static int playgame(void)
  */
 static int newgame(void)
 {
-    int ctl, act;
+    int ctl;
 
     controls[ctl_button].value = bval_newgame;
-    controls[ctl_button].disabled = 0;
+    cleardisabled(controls[ctl_button]);
     for (;;) {
-	render();
-	if (!getinputevent(&ctl, &act))
+	if (!runio(&ctl))
 	    return 0;
-	if (ctl != ctl_button)
-	    continue;
-	switch (act) {
-	  case act_over:
-	    controls[ctl_button].hovering = 1;
-	    break;
-	  case act_out:
-	    controls[ctl_button].hovering = 0;
-	    break;
-	  case act_down:
-	    controls[ctl_button].set = 1;
-	    break;
-	  case act_up:
-	    controls[ctl_button].set = 0;
-	    if (controls[ctl_button].hovering)
-		return 1;
-	    break;
-	  case act_clicked:
-	    flashbutton();
+	if (ctl == ctl_button)
 	    return 1;
-	}
     }
 }
 
@@ -336,14 +274,19 @@ int main(int argc, char *argv[])
     srand(time(0));
     initcontrols();
     initscoring();
-#if !defined INCLUDE_SDL
-    initializeio(io_curses);
-#elif !defined INCLUDE_CURSES
-    initializeio(io_sdl);
-#else
-    initializeio(getenv("DISPLAY") ? io_sdl :
-		 getenv("TERM") ? io_curses : io_text);
+
+#if defined INCLUDE_SDL
+    if (getenv("DISPLAY"))
+	initializeio(io_sdl);
+    else
 #endif
+#if defined INCLUDE_CURSES
+    if (getenv("TERM"))
+	initializeio(io_curses);
+    else
+#endif
+	initializeio(io_text);
+
     while (playgame() && newgame()) ;
     return 0;
 }

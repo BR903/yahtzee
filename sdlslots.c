@@ -179,11 +179,11 @@ int updateslot(struct sdlcontrol *ctl)
     }
     if (ctl->lastvalue < 0)
 	state = s_open;
-    else if (ctl->control->set)
+    else if (isdisabled(*ctl->control))
 	state = s_set;
-    else if (selected == ctl->control)
+    else if (isselected(*ctl->control))
 	state = s_selected;
-    else if (ctl->control->hovering)
+    else if (ctl->hovering)
 	state = s_over;
     else
 	state = s_open;

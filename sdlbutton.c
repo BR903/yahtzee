@@ -180,12 +180,12 @@ int updatebutton(struct sdlcontrol *ctl)
 {
     int state;
 
-    if (ctl->control->disabled)
+    if (isdisabled(*ctl->control))
 	state = s_disabled;
-    else if (ctl->control->hovering)
-	state = ctl->control->set ? s_down : s_over;
+    else if (ctl->hovering)
+	state = ctl->down ? s_down : s_over;
     else
-	state = ctl->control->set ? s_over : s_up;
+	state = ctl->down ? s_over : s_up;
     state += ctl->control->value * s_count;
     if (ctl->state == state)
 	return 0;

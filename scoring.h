@@ -11,9 +11,9 @@
  */
 extern void initscoring(void);
 
-/* Compute the score for the given slot using the current dice.
+/* Compute the score for each open slot using the current dice.
  */
-extern int scorevalue(int slotid);
+extern void updateopenslots(void);
 
 /* Update the values for the output-only scoring slots.
  */

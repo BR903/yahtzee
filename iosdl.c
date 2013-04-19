@@ -28,11 +28,8 @@ int const sdl_scalingunit = 4;
 
 /* The color of the window's background area.
  */
-static SDL_Color const bkgndcolor = { 128, 191, 191, 0 };
-
-/* The array of SDL control info, mirroring the controls array.
- */
-static struct sdlcontrol sdlcontrols[ctl_count];
+static SDL_Color const bkgnd = { 128, 191, 191, 0 };
+static Uint32 bkgndcolor;
 
 /* Size of the display.
  */
@@ -42,6 +39,10 @@ static int cxWindow, cyWindow;
  */
 static int redrawall;
 
+/* The array of SDL control info, mirroring the controls array.
+ */
+static struct sdlcontrol sdlcontrols[ctl_count];
+
 /* Each control's state update functions.
  */
 static int (*stateupdatefunctions[ctl_count])(struct sdlcontrol *);
@@ -49,7 +50,7 @@ static int (*stateupdatefunctions[ctl_count])(struct sdlcontrol *);
 /* A small event queue. Needed because a single SDL event
  * can potentially map to two or even three input events.
  */
-static struct { int control, action; } eventqueue[4];
+static int eventqueue[4];
 static unsigned int eventqueuesize = 0;
 
 /*
@@ -66,7 +67,7 @@ static void initcontrols(void)
 	sdlcontrols[i].control = &controls[i];
 
     for (i = ctl_dice ; i < ctl_dice_end ; ++i) {
-	makedie(&sdlcontrols[i]);
+	makedie(&sdlcontrols[i], bkgnd);
 	stateupdatefunctions[i] = updatedie;
     }
     makebutton(&sdlcontrols[ctl_button]);
@@ -128,35 +129,6 @@ static void initlayout(void)
 }
 
 /*
- * Using the event queue.
- */
-
-/* Add an input event to the queue.
- */
-static void queueinputevent(int control, int action)
-{
-    if (eventqueuesize < sizeof eventqueue / sizeof *eventqueue) {
-	eventqueue[eventqueuesize].control = control;
-	eventqueue[eventqueuesize].action = action;
-	++eventqueuesize;
-    }
-}
-
-/* Retrieve the first input event from the queue. Returns false if the
- * queue is empty.
- */
-static int unqueueinputevent(int *control, int *action)
-{
-    if (eventqueuesize == 0)
-	return 0;
-    *control = eventqueue[0].control;
-    *action = eventqueue[0].action;
-    --eventqueuesize;
-    memmove(eventqueue, eventqueue + 1, eventqueuesize * sizeof *eventqueue);
-    return 1;
-}
-
-/*
  * Exported functions.
  */
 
@@ -191,6 +163,7 @@ int sdl_initializeio(void)
 	croak("%s\nCannot resize display to %d x %d.",
 	      SDL_GetError(), cxWindow, cyWindow);
 
+    bkgndcolor = SDL_MapRGB(sdl_screen->format, bkgnd.r, bkgnd.g, bkgnd.b);
     SDL_WM_SetCaption("Yahtzee", "Yahtzee");
     SDL_EnableUNICODE(1);
     redrawall = 1;
@@ -199,54 +172,99 @@ int sdl_initializeio(void)
 
 /* Render our controls to the display as required.
  */
-void sdl_render(void)
+static void render(void)
 {
     SDL_Rect drawrects[ctl_count];
-    Uint32 color;
     int drawcount, i;
 
     if (redrawall) {
-	color = SDL_MapRGB(sdl_screen->format, bkgndcolor.r,
-			   bkgndcolor.g, bkgndcolor.b);
-	SDL_FillRect(sdl_screen, NULL, color);
-    }
-    drawcount = 0;
-    for (i = 0 ; i < ctl_count ; ++i) {
-	if (stateupdatefunctions[i](&sdlcontrols[i]) || redrawall) {
-	    if (sdlcontrols[i].images[sdlcontrols[i].state]->format->Amask)
-		SDL_FillRect(sdl_screen, &sdlcontrols[i].rect,
-			     SDL_MapRGB(sdl_screen->format, bkgndcolor.r,
-					bkgndcolor.g, bkgndcolor.b));
+	SDL_FillRect(sdl_screen, NULL, bkgndcolor);
+	for (i = 0 ; i < ctl_count ; ++i) {
+	    stateupdatefunctions[i](&sdlcontrols[i]);
+	    SDL_BlitSurface(sdlcontrols[i].images[sdlcontrols[i].state], NULL,
+			    sdl_screen, &sdlcontrols[i].rect);
+	}
+	SDL_UpdateRect(sdl_screen, 0, 0, 0, 0);
+	redrawall = 0;
+    } else {
+	drawcount = 0;
+	for (i = 0 ; i < ctl_count ; ++i) {
+	    if (!stateupdatefunctions[i](&sdlcontrols[i]))
+		continue;
 	    SDL_BlitSurface(sdlcontrols[i].images[sdlcontrols[i].state], NULL,
 			    sdl_screen, &sdlcontrols[i].rect);
 	    drawrects[drawcount++] = sdlcontrols[i].rect;
 	}
-    }
-    if (redrawall) {
-	SDL_UpdateRect(sdl_screen, 0, 0, 0, 0);
-	redrawall = 0;
-    } else {
 	if (drawcount)
 	    SDL_UpdateRects(sdl_screen, drawcount, drawrects);
     }
 }
 
-/* Run the event loop until a valid input event is encountered. Input
- * events include mouse hovering onto (or out of) a control, left
- * mouse button clicks (up and down), and keyboard characters
- * corresponding to a control's hotkey.
+/*
+ * Managing the controls.
  */
-int sdl_getinputevent(int *control, int *action)
+
+/* Add an input event to the queue.
+ */
+static void queueinputevent(int control)
+{
+    if (eventqueuesize < sizeof eventqueue / sizeof *eventqueue)
+	eventqueue[eventqueuesize++] = control;
+}
+
+/* Retrieve the first input event from the queue. Returns false if the
+ * queue is empty.
+ */
+static int unqueueinputevent(int *control)
+{
+    if (eventqueuesize == 0)
+	return 0;
+    *control = eventqueue[0];
+    --eventqueuesize;
+    memmove(eventqueue, eventqueue + 1, eventqueuesize * sizeof *eventqueue);
+    return 1;
+}
+
+/* Track which control the mouse is hovering over.
+ */
+static void sethovering(int id)
+{
+    int i;
+
+    for (i = 0 ; i < ctl_count ; ++i)
+	sdlcontrols[i].hovering = i == id;
+}
+
+/* Simulate a brief mouse click on a control.
+ */
+static void flashcontrol(int id)
+{
+    struct sdlcontrol saved;
+
+    saved = sdlcontrols[id];
+    sdlcontrols[id].hovering = 1;
+    sdlcontrols[id].down = 1;
+    render();
+    SDL_Delay(100);
+    sdlcontrols[id] = saved;
+    render();
+}
+
+/* Update the display and run the event loop until a valid input event
+ * is encountered. Input events include mouse button clicks (up and
+ * down), and keyboard characters corresponding to a control's hotkey.
+ */
+int sdl_runio(int *control)
 {
     static int mousetrap = -1;
-    static int lasthovering = -1;
 
     SDL_Event event;
     int ch, i;
 
     for (;;) {
-	if (unqueueinputevent(control, action))
+	if (unqueueinputevent(control))
 	    return 1;
+	render();
 	if (SDL_WaitEvent(&event) < 0)
 	    exit(1);
 	switch (event.type) {
@@ -254,40 +272,30 @@ int sdl_getinputevent(int *control, int *action)
 	    if (event.button.button != SDL_BUTTON_LEFT)
 		break;
 	    if (mousetrap >= 0) {
-		queueinputevent(mousetrap, act_out);
-		queueinputevent(mousetrap, act_up);
+		sdlcontrols[mousetrap].down = 0;
 		mousetrap = -1;
 	    }
 	    i = ctl_count;
 	    while (i-- > 0 && !inrect(event.button, sdlcontrols[i].rect)) ;
-	    lasthovering = i;
-	    if (i >= 0) {
-		queueinputevent(i, act_down);
+	    sethovering(i);
+	    if (i == ctl_button) {
 		mousetrap = i;
+		sdlcontrols[i].down = 1;
+	    } else {
+		if (i >= 0)
+		    queueinputevent(i);
 	    }
 	    break;
 	  case SDL_MOUSEMOTION:
 	    if (mousetrap >= 0) {
-		if (inrect(event.button, sdlcontrols[mousetrap].rect)) {
-		    if (lasthovering != mousetrap) {
-			lasthovering = mousetrap;
-			queueinputevent(mousetrap, act_over);
-		    }
-		} else {
-		    if (lasthovering == mousetrap) {
-			lasthovering = -1;
-			queueinputevent(mousetrap, act_out);
-		    }
-		}
+		if (inrect(event.button, sdlcontrols[mousetrap].rect))
+		    sethovering(mousetrap);
+		else
+		    sethovering(-1);
 	    } else {
 		i = ctl_count;
 		while (i-- && !inrect(event.button, sdlcontrols[i].rect)) ;
-		if (lasthovering != i) {
-		    queueinputevent(lasthovering, act_out);
-		    lasthovering = i;
-		    if (i >= 0)
-			queueinputevent(i, act_over);
-		}
+		sethovering(i);
 	    }
 	    break;
 	  case SDL_MOUSEBUTTONUP:
@@ -295,9 +303,11 @@ int sdl_getinputevent(int *control, int *action)
 		break;
 	    if (mousetrap < 0)
 		break;
-	    if (!inrect(event.button, sdlcontrols[mousetrap].rect))
-		queueinputevent(mousetrap, act_out);
-	    queueinputevent(mousetrap, act_up);
+	    sdlcontrols[mousetrap].down = 0;
+	    if (inrect(event.button, sdlcontrols[mousetrap].rect))
+		queueinputevent(mousetrap);
+	    else
+		sethovering(-1);
 	    mousetrap = -1;
 	    break;
 	  case SDL_KEYDOWN:
@@ -309,7 +319,7 @@ int sdl_getinputevent(int *control, int *action)
 		return 0;
 	    if (event.key.keysym.sym == SDLK_RETURN ||
 				event.key.keysym.sym == SDLK_KP_ENTER) {
-		queueinputevent(ctl_button, act_clicked);
+		queueinputevent(ctl_button);
 		break;
 	    }
 	    if (event.key.keysym.sym == SDLK_F1 ||
@@ -317,21 +327,21 @@ int sdl_getinputevent(int *control, int *action)
 		if (!runhelp())
 		    return 0;
 		redrawall = 1;
-		sdl_render();
 		break;
 	    } else if ((event.key.keysym.mod & KMOD_CTRL) &&
 				event.key.keysym.sym == SDLK_k) {
 		if (!showkeyhelp(sdlcontrols))
 		    return 0;
 		redrawall = 1;
-		sdl_render();
 		break;
 	    }
 	    ch = event.key.keysym.unicode;
 	    if (ch) {
 		for (i = 0 ; i < ctl_count ; ++i) {
 		    if (sdlcontrols[i].control->key == ch) {
-			queueinputevent(i, act_clicked);
+			if (i == ctl_button)
+			    flashcontrol(i);
+			queueinputevent(i);
 			break;
 		    }
 		}
@@ -339,7 +349,6 @@ int sdl_getinputevent(int *control, int *action)
 	    break;
 	  case SDL_VIDEOEXPOSE:
 	    redrawall = 1;
-	    sdl_render();
 	    break;
 	  case SDL_QUIT:
 	    return 0;
@@ -347,5 +356,4 @@ int sdl_getinputevent(int *control, int *action)
 	    break;
 	}
     }
-
 }

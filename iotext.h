@@ -7,14 +7,9 @@
 #ifndef _iotext_h_
 #define _iotext_h_
 
-#ifdef INCLUDE_TEXT
-
 /* The pure-text-based versions of the functions defined in io.h.
  */
 extern int text_initializeio(void);
-extern int text_getinputevent(int *control, int *action);
-extern void text_render(void);
-
-#endif
+extern int text_runio(int *control);
 
 #endif

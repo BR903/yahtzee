@@ -12,8 +12,7 @@
 /* The curses-based versions of the functions defined in io.h.
  */
 extern int curses_initializeio(void);
-extern int curses_getinputevent(int *control, int *action);
-extern void curses_render(void);
+extern int curses_runio(int *control);
 
 #endif
 

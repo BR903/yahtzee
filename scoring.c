@@ -121,6 +121,7 @@ void initscoring(void)
     slotevalfunctions[ctl_slot_chance] = chance;
 }
 
+#if 0
 /* Compute the score for the given slot using the current dice.
  */
 int scorevalue(int slotid)
@@ -131,6 +132,21 @@ int scorevalue(int slotid)
     for (i = ctl_dice ; i < ctl_dice_end ; ++i)
 	++values[controls[i].value];
     return slotevalfunctions[slotid](values);
+}
+#endif
+
+/* Compute the score for each open slot using the current dice.
+ */
+void updateopenslots(void)
+{
+    int values[6] = { 0, 0, 0, 0, 0, 0 };
+    int i;
+
+    for (i = ctl_dice ; i < ctl_dice_end ; ++i)
+	++values[controls[i].value];
+    for (i = ctl_slots ; i < ctl_slots_end ; ++i)
+	if (!isdisabled(controls[i]))
+	    controls[i].value = slotevalfunctions[i](values);
 }
 
 /* Update the values for the output-only scoring slots (subtotal,
@@ -143,7 +159,7 @@ void updatescores(void)
     total = 0;
     setcount = 0;
     for (i = ctl_slot_ones ; i <= ctl_slot_sixes ; ++i) {
-	if (controls[i].set || selected == &controls[i]) {
+	if (isdisabled(controls[i]) || isselected(controls[i])) {
 	    ++setcount;
 	    total += controls[i].value;
 	}
@@ -161,7 +177,7 @@ void updatescores(void)
 	controls[ctl_slot_bonus].value = -1;
     }
     for (i = ctl_slot_threeofakind ; i <= ctl_slot_chance ; ++i) {
-	if (controls[i].set || selected == &controls[i]) {
+	if (isdisabled(controls[i]) || isselected(controls[i])) {
 	    ++setcount;
 	    total += controls[i].value;
 	}

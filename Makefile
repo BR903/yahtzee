@@ -1,12 +1,8 @@
 CC = gcc
-CFLAGS = -Wall -W
+CFLAGS = -Wall -W -O
 LDFLAGS = -Wall -W -s
 LOADLIBES =
-OBJLIST = yahtzee.o gen.o scoring.o io.o
-
-# Comment out this section to remove support for the dumb terminal interface.
-CFLAGS += -DINCLUDE_TEXT
-OBJLIST += iotext.o
+OBJLIST = yahtzee.o gen.o scoring.o io.o iotext.o
 
 # Comment out this section to remove support for the curses interface.
 CFLAGS += -DINCLUDE_CURSES

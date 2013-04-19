@@ -91,42 +91,9 @@ static void initlayout(void)
     ySlots = yButton + 2;
 }
 
-/* Initialize the curses subsystem and register a palette of colors.
- */
-int curses_initializeio(void)
-{
-    if (!initscr())
-	croak("Unable to initialize the terminal.");
-    atexit(shutdown);
-    initlayout();
-    cbreak();
-    noecho();
-    keypad(stdscr, TRUE);
-    mousemask(BUTTON1_CLICKED, NULL);
-    if (has_colors()) {
-	start_color();
-	init_pair(1, COLOR_BLACK, 0);
-	init_pair(2, COLOR_CYAN, 0);
-	init_pair(3, COLOR_YELLOW, 0);
-	init_pair(4, COLOR_BLUE, 0);
-	attrs[a_normal] = A_NORMAL;
-	attrs[a_dim] = COLOR_PAIR(1) | A_BOLD;
-	attrs[a_marked] = COLOR_PAIR(2);
-	attrs[a_selected] = COLOR_PAIR(3);
-	attrs[a_overlay] = COLOR_PAIR(4) | A_BOLD;
-    } else {
-	attrs[a_normal] = A_NORMAL;
-	attrs[a_dim] = A_DIM;
-	attrs[a_marked] = A_DIM;
-	attrs[a_selected] = A_STANDOUT;
-	attrs[a_overlay] = A_BOLD;
-    }
-    return 1;
-}
-
 /* Update the display.
  */
-void curses_render(void)
+static void render(void)
 {
     char const *text;
     int i, n, x;
@@ -137,11 +104,11 @@ void curses_render(void)
 
     x = xDice;
     for (i = ctl_dice ; i < ctl_dice_end ; ++i) {
-	if (controls[i].set)
+	if (isselected(controls[i]))
 	    aset(a_marked);
 	for (n = 0 ; n < cyDie ; ++n)
 	    mvaddstr(yDice + n, x, dielines[n][controls[i].value]);
-	if (controls[i].set)
+	if (isselected(controls[i]))
 	    aset(a_normal);
 	x += cxDie + cxDieSpacing;
     }
@@ -150,11 +117,11 @@ void curses_render(void)
 
     text = buttontext[controls[ctl_button].value];
     move(yButton, xButton);
-    if (controls[ctl_button].disabled) {
+    if (isdisabled(controls[ctl_button])) {
 	aset(a_dim);
 	printw("| %s |", text);
 	aset(a_normal);
-    } else if (controls[ctl_button].set) {
+    } else if (isselected(controls[ctl_button])) {
 	addstr("[[");
 	aset(a_selected);
 	addstr(text);
@@ -171,11 +138,11 @@ void curses_render(void)
     while (i < ctl_slots_end) {
 	for (n = 0 ; n < ctl_slots_count / 2 ; ++n, ++i) {
 	    move(ySlots + n, x);
-	    if (selected == &controls[i])
+	    if (isselected(controls[i]))
 		aset(a_selected);
 	    printw("%-*s", cxSlot - 3, slottext[i - ctl_slots]);
 	    if (controls[i].value >= 0) {
-		if (controls[i].set || selected == &controls[i])
+		if (isdisabled(controls[i]) || isselected(controls[i]))
 		    printw("%3d", controls[i].value);
 	    }
 	    aset(a_normal);
@@ -229,7 +196,7 @@ static int runhelp(void)
 	  case '\027':
 	    return 0;
 	  default:
-	    curses_render();
+	    render();
 	    return 1;
 	}
     }
@@ -237,7 +204,7 @@ static int runhelp(void)
 
 /* Determine if a mouse click occurred over one of the controls.
  */
-static int getmouseevent(int *control, int *action)
+static int getmouseevent(int *control)
 {
     MEVENT event;
     int i, x;
@@ -249,7 +216,6 @@ static int getmouseevent(int *control, int *action)
 	for (i = ctl_dice ; i < ctl_dice_end ; ++i) {
 	    if (event.x >= x && event.x < x + cxDie) {
 		*control = i;
-		*action = act_clicked;
 		return 1;
 	    }
 	    x += cxDie + cxDieSpacing;
@@ -258,42 +224,76 @@ static int getmouseevent(int *control, int *action)
     if (event.y == yButton && event.x >= xButton
 			   && event.x < xButton + cxButton) {
 	*control = ctl_button;
-	*action = act_clicked;
 	return 1;
     }
     if (event.y >= ySlots && event.y < ySlots + cySlots) {
 	if (event.x >= xSlots && event.x < xSlots + cxSlot) {
 	    *control = ctl_slots + (event.y - ySlots);
-	    *action = act_clicked;
 	    return 1;
 	}
 	if (event.x >= xSlots + cxSlot + cxSlotSpacing &&
 			event.x < xSlots + cxSlot * 2 + cxSlotSpacing) {
 	    *control = ctl_slots + (ctl_slots_count / 2) + (event.y - ySlots);
-	    *action = act_clicked;
 	    return 1;
 	}
     }
     return 0;
 }
 
+/*
+ * Exported functions.
+ */
+
+/* Initialize the curses subsystem and register a palette of colors.
+ */
+int curses_initializeio(void)
+{
+    if (!initscr())
+	return 0;
+    atexit(shutdown);
+    initlayout();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+    mousemask(BUTTON1_CLICKED, NULL);
+    if (has_colors()) {
+	start_color();
+	init_pair(1, COLOR_BLACK, 0);
+	init_pair(2, COLOR_CYAN, 0);
+	init_pair(3, COLOR_YELLOW, 0);
+	init_pair(4, COLOR_BLUE, 0);
+	attrs[a_normal] = A_NORMAL;
+	attrs[a_dim] = COLOR_PAIR(1) | A_BOLD;
+	attrs[a_marked] = COLOR_PAIR(2);
+	attrs[a_selected] = COLOR_PAIR(3);
+	attrs[a_overlay] = COLOR_PAIR(4) | A_BOLD;
+    } else {
+	attrs[a_normal] = A_NORMAL;
+	attrs[a_dim] = A_DIM;
+	attrs[a_marked] = A_DIM;
+	attrs[a_selected] = A_STANDOUT;
+	attrs[a_overlay] = A_BOLD;
+    }
+    return 1;
+}
+
 /* Wait for a keystroke corresponding to a control.
  */
-int curses_getinputevent(int *control, int *action)
+int curses_runio(int *control)
 {
     int ch, i;
 
     for (;;) {
+	render();
 	ch = tolower(getch());
 	switch (ch) {
 	  case '\r':
 	  case '\n':
 	  case KEY_ENTER:
 	    *control = ctl_button;
-	    *action = act_clicked;
 	    return 1;
 	  case KEY_MOUSE:
-	    if (getmouseevent(control, action))
+	    if (getmouseevent(control))
 		return 1;
 	    break;
 	  case '?':
@@ -303,11 +303,9 @@ int curses_getinputevent(int *control, int *action)
 	    break;
 	  case '\f':
 	    clearok(stdscr, TRUE);
-	    curses_render();
 	    break;
 	  case KEY_RESIZE:
 	    initlayout();
-	    curses_render();
 	    break;
 	  case '\003':
 	  case '\027':
@@ -318,7 +316,6 @@ int curses_getinputevent(int *control, int *action)
 	    for (i = 0 ; i < ctl_count ; ++i) {
 		if (controls[i].key == ch) {
 		    *control = i;
-		    *action = act_clicked;
 		    return 1;
 		}
 	    }

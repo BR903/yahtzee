@@ -48,27 +48,21 @@
 #define	bval_newgame		2
 #define	bval_count		3
 
-/* Input event actions.
- */
-enum { act_null, act_over, act_out, act_down, act_up, act_clicked };
-
 /* The information stored for each I/O control.
  */
 struct control {
-    int value: 16;		/* the value currently stored in the control */
-    int key: 10;		/* the control's hot key */
-    int disabled: 2;		/* true if the control is disabled for input */
-    int set: 2;			/* true if the control has been activated */
-    int hovering: 2;		/* true if the mouse is hovering over */
+    short value;		/* the value currently stored in the control */
+    unsigned char key;		/* the control's hot key */
+    unsigned char flags;	/* state flags: selected and disabled */
 };
+
+#define ctlflag_selected	0x01
+#define ctlflag_disabled	0x02
+#define isselected(control)	((control).flags & ctlflag_selected)
+#define isdisabled(control)	((control).flags & ctlflag_disabled)
 
 /* The array of I/O controls.
  */
 extern struct control controls[ctl_count];
-
-/* A pointer to the currently selected slot, or null if no slot is
- * selected.
- */
-extern struct control *selected;
 
 #endif

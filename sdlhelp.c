@@ -31,8 +31,33 @@ static void initfont(char const *path, int fontheight)
     font = TTF_OpenFont(path, fontheight);
     if (!font)
 	croak("%s\nUnable to load font.", TTF_GetError());
-    keyheight = TTF_FontLineSkip(font);
-    keywidth = keyheight;
+    keyheight = TTF_FontLineSkip(font) + 2;
+    keywidth = keyheight + 2;
+}
+
+/* Given a surface, draw a border around its edges, using the given
+ * color and width (in pixels).
+ */
+static void outlinesurface(SDL_Surface *surface, SDL_Color color, int width)
+{
+    Uint32 colorvalue;
+    SDL_Rect rect;
+
+    colorvalue = SDL_MapRGB(surface->format, color.r, color.g, color.b);
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = surface->w;
+    rect.h = width;
+    SDL_FillRect(surface, &rect, colorvalue);
+    rect.y = surface->h - width;
+    SDL_FillRect(surface, &rect, colorvalue);
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = width;
+    rect.h = surface->h;
+    SDL_FillRect(surface, &rect, colorvalue);
+    rect.x = surface->w - width;
+    SDL_FillRect(surface, &rect, colorvalue);
 }
 
 /* Create a set of graphics containing the hot key characters for all
@@ -76,6 +101,7 @@ static void makekeys(SDL_Surface *keys[], struct sdlcontrol const *sdlcontrols)
 	SDL_FillRect(keys[i], NULL,
 		     SDL_MapRGB(keys[i]->format,
 				keycolor.r, keycolor.g, keycolor.b));
+	outlinesurface(keys[i], keytextcolor, 1);
 	rect.x = (keys[i]->w - image->w) / 2;
 	rect.y = (keys[i]->h - image->h) / 2;
 	SDL_BlitSurface(image, NULL, keys[i], &rect);

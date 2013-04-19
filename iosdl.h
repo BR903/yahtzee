@@ -12,8 +12,7 @@
 /* The SDL-based versions of the functions defined in io.h.
  */
 extern int sdl_initializeio(void);
-extern int sdl_getinputevent(int *control, int *action);
-extern void sdl_render(void);
+extern int sdl_runio(int *control);
 
 #endif
 

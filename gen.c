@@ -10,7 +10,7 @@
 #include "gen.h"
 
 char const *versioninfo[] = {
-    "yahtzee: version 1.2.",
+    "yahtzee: version 1.3.",
     "Copyright (C) 2010 Brian Raiter.",
     "This program is free software. See README for details.",
     NULL

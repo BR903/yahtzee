@@ -2,8 +2,11 @@
 
 In addition to providing a simple game, this source code demonstrates
 one approach to providing a basic user interface on top of
-general-purpose I/O libraries. This program includes both a graphical
-interface via SDL and a terminal interface via ncurses.
+general-purpose I/O libraries. This program includes a graphical
+interface via SDL, a terminal interface via ncurses, and a
+dumb-terminal interface with no external dependencies. The basic game
+logic is the same for all three interfaces, and the program can be
+built with any or all of the above interfaces.
 
 
   Building and Installing
@@ -14,15 +17,15 @@ This program depends on the ncurses library, the SDL library, and the
 SDL_ttf library. You will need to have development versions of these
 three libraries installed.
 
-If you want to build a version that only uses ncurses, or a version
-that only uses SDL, you can edit the Makefile and comment out the
-indicated sections before building.
+If you want to leave out the SDL interface and/or the ncurses
+interface, you can edit the Makefile and comment out the indicated
+sections before building.
 
 The SDL version of the interface makes use of two FreeFont fonts. By
 default, the program looks for the TTF files in the directory
 /usr/share/fonts/truetype/freefont. If these fonts are in a different
-location on your machine, edit the value of FONT_DIR in the Makefile
-before building.
+location on your machine, you will need to edit the value of FONT_DIR
+in the Makefile before building.
 
 There is no installation process; just copy the binary to the desired
 location.

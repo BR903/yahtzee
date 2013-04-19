@@ -15,15 +15,11 @@ enum { io_text, io_curses, io_sdl };
  */
 extern int initializeio(int);
 
-/* Update the output to reflect the current game state.
+/* Update the output to reflect the current game state and wait for an
+ * input event. Returns false if the user requested that the program
+ * exit. Otherwise returns true, and with control set to the control
+ * id that received the input.
  */
-extern void (*render)(void);
-
-/* Wait for an input event. Returns false if the user requested that
- * the program exit. Otherwise returns true, and with control set to
- * the control id that generated the input, and action indicating the
- * input event that occurred.
- */
-extern int (*getinputevent)(int *control, int *action);
+extern int (*runio)(int *control);
 
 #endif
