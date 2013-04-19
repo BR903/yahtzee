@@ -1,0 +1,13 @@
+#!/bin/bash
+
+VER=`sed -n 's/.*: version \([0-9]*\(\.[0-9]*\)\).*/\1/p' gen.c`
+DIR=yahtzee-$VER
+DIST=yahtzee-$VER.tar.gz
+
+rm -f $DIST
+mkdir $DIR
+cp -a gen.[ch] scoring.[ch] io.[ch] yahtzee.[ch] iotext.[ch] iocurses.[ch] \
+      iosdl.[ch] iosdlctl.h sdlbutton.c sdldice.c sdlslots.c sdlhelp.c \
+      Makefile README $DIR/.
+tar -czf $DIST $DIR/*
+rm -r $DIR

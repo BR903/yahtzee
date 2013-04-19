@@ -2,14 +2,6 @@
  *
  * Copyright (C) 2010 Brian Raiter.
  * This program is free software. See README for details.
- *
- * NOTE: THIS IS NOT THE REAL CODE FOR THE PLAIN TEXT UI.
- *
- * The original version of this file was lost. This file is only a
- * placeholder, derived from the 1.4 version of the file. It compiles,
- * but the text-mode interface does not function correctly. (The other
- * two interfaces are fine.) Please refer to version 1.4 or later for
- * a real example of this code.
  */
 
 #include <stdio.h>
@@ -128,6 +120,13 @@ static void showscoresheet(void)
 static void showprompt(void)
 {
     int i;
+
+    for (i = ctl_dice ; i < ctl_dice_end ; ++i) {
+	if (ismodified(controls[i])) {
+	    clearmodified(controls[i]);
+	    displaydice = 1;
+	}
+    }
 
     if (controls[ctl_button].value == bval_newgame) {
 	if (displaydice)
@@ -292,7 +291,7 @@ int text_initializeio(void)
     for (i = ctl_slots ; i < ctl_slots_end ; ++i)
 	lastvalues[i] = controls[i].value;
     displayscore = 0;
-    displaydice = 1;
+    displaydice = 0;
     return 1;
 }
 
@@ -305,10 +304,8 @@ int text_runio(int *control)
     int ch, i, n;
 
     for (;;) {
-	if (unqueueinputevent(control)) {
-	    displaydice = 1;
+	if (unqueueinputevent(control))
 	    return 1;
-	}
 	for (i = ctl_slots ; i < ctl_slots_end ; ++i) {
 	    n = isdisabled(controls[i]) || isselected(controls[i]);
 	    if (lastvalues[i] != n) {

@@ -78,6 +78,8 @@ static void shutdown(void)
 	endwin();
 }
 
+/* Calculate the locations of the screen elements.
+ */
 static void initlayout(void)
 {
     getmaxyx(stdscr, cyScreen, cxScreen);
@@ -154,8 +156,49 @@ static void render(void)
     refresh();
 }
 
-/* Temporarily overlay help text on the current display, and then wait
- * for a keypress before restoring the original screen.
+/* Temporarily display text describing the rules of the game and wait
+ * for a keypress.
+ */
+static int runruleshelp(void)
+{
+    static char const *helptext[] = {
+	"Each turn begins with a roll of the dice. Select which dice to",
+	"re-roll and push the Roll Dice button. Two re-rolls are",
+	"permitted per turn. After re-rolling, choose where to score",
+	"the dice and push the Score button.",
+	"",
+	"A full house is worth 25 points, a small straight (four dice)",
+	"scores 30 points, a large straight (five dice) scores 40",
+	"points, and yahtzee scores 50 points. Three of a kind, four of",
+	"a kind, and chance score the total of all five dice.",
+	"",
+	"If the left side scores 63 or more points, a bonus of 35",
+	"points is awarded.",
+	"",
+	NULL
+    };
+
+    int i;
+
+    erase();
+    mvaddstr(0, xDice + 4, "Rules of the Game");
+    for (i = 0 ; helptext[i] ; ++i)
+	mvaddstr(2 + i, xDice - 1, helptext[i]);
+
+    for (;;) {
+	switch (getch()) {
+	  case '\003':
+	  case '\030':
+	    return 0;
+	  default:
+	    render();
+	    return 1;
+	}
+    }
+}
+
+/* Temporarily overlay text describing the key commands and wait for a
+ * keypress.
  */
 static int runhelp(void)
 {
@@ -170,7 +213,7 @@ static int runhelp(void)
     }
     mvaddstr(yButton - 1, xDice - 1, "Use (space) or (return)");
     mvaddstr(yButton, xDice + 1, "to push the button:");
-    mvaddstr(yButton - 1, xDice + cxDice - 11, "Use (ctrl W)");
+    mvaddstr(yButton - 1, xDice + cxDice - 11, "Use (ctrl X)");
     mvaddstr(yButton, xDice + cxDice - 9, "to exit.");
     mvaddstr(ySlots - 1, xDice - 1,
 	     "Use these keys to select a scoring slot:");
@@ -184,8 +227,9 @@ static int runhelp(void)
     }
     y = ySlots + cySlots;
     mvaddstr(y, xDice - 1, "Use (?) or (F1) to view this help again.");
+    mvaddstr(y + 1, xDice - 1, "Use (ctrl R) to view the rules.");
     for (i = 0 ; versioninfo[i] ; ++i)
-	mvaddstr(y + i + 2, xDice - 1, versioninfo[i]);
+	mvaddstr(y + i + 3, xDice - 1, versioninfo[i]);
     aset(a_normal);
     move(cyScreen - 1, 0);
     refresh();
@@ -193,8 +237,11 @@ static int runhelp(void)
     for (;;) {
 	switch (getch()) {
 	  case '\003':
-	  case '\027':
+	  case '\030':
 	    return 0;
+	  case '\022':
+	    return runruleshelp();
+	    break;
 	  default:
 	    render();
 	    return 1;
@@ -277,7 +324,7 @@ int curses_initializeio(void)
     return 1;
 }
 
-/* Wait for a keystroke corresponding to a control.
+/* Update the display and wait for an input event.
  */
 int curses_runio(int *control)
 {
@@ -301,6 +348,10 @@ int curses_runio(int *control)
 	    if (!runhelp())
 		return 0;
 	    break;
+	  case '\022':
+	    if (!runruleshelp())
+		return 0;
+	    break;
 	  case '\f':
 	    clearok(stdscr, TRUE);
 	    break;
@@ -308,7 +359,7 @@ int curses_runio(int *control)
 	    initlayout();
 	    break;
 	  case '\003':
-	  case '\027':
+	  case '\030':
 	    return 0;
 	  case ERR:
 	    exit(1);

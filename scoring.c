@@ -121,20 +121,6 @@ void initscoring(void)
     slotevalfunctions[ctl_slot_chance] = chance;
 }
 
-#if 0
-/* Compute the score for the given slot using the current dice.
- */
-int scorevalue(int slotid)
-{
-    int values[6] = { 0, 0, 0, 0, 0, 0 };
-    int i;
-
-    for (i = ctl_dice ; i < ctl_dice_end ; ++i)
-	++values[controls[i].value];
-    return slotevalfunctions[slotid](values);
-}
-#endif
-
 /* Compute the score for each open slot using the current dice.
  */
 void updateopenslots(void)

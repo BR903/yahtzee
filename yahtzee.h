@@ -53,13 +53,17 @@
 struct control {
     short value;		/* the value currently stored in the control */
     unsigned char key;		/* the control's hot key */
-    unsigned char flags;	/* state flags: selected and disabled */
+    unsigned char flags;	/* state flags: selected, disabled, modified */
 };
 
 #define ctlflag_selected	0x01
 #define ctlflag_disabled	0x02
+#define ctlflag_modified	0x04
 #define isselected(control)	((control).flags & ctlflag_selected)
 #define isdisabled(control)	((control).flags & ctlflag_disabled)
+#define ismodified(control)	((control).flags & ctlflag_modified)
+
+#define clearmodified(control)	((control).flags &= ~ctlflag_modified)
 
 /* The array of I/O controls.
  */

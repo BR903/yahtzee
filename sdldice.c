@@ -10,17 +10,24 @@
 #include "gen.h"
 #include "iosdlctl.h"
 
+/* Set a single pixel in a 32-bit surface.
+ */
+#define setpixel(s, x, y, p) \
+    (((Uint32*)(((Uint8*)((s)->pixels)) + (y) * (s)->pitch))[x] = (p))
+
+/* Reference count for shared objects.
+ */
+static int ctlrefcount = 0;
+
 /* Images for all dice controls. The first six images are for each
  * face; the other six show the same faces but shaded to indicate
  * selection.
  */
 static SDL_Surface *dieimages[12];
-static int diesize;
 
-/* Set a single pixel in a 32-bit surface.
+/* Width and height of the die image.
  */
-#define setpixel(s, x, y, p) \
-    (((Uint32*)(((Uint8*)((s)->pixels)) + (y) * (s)->pitch))[x] = (p))
+static int diesize;
 
 /* Transform cartesian coordinates to polar coordinates.
  */
@@ -30,8 +37,8 @@ static void topolar(int x, int y, float *r, float *t)
     *t = atanf((float)y / x);
 }
 
-/* Draw a rectangle with a white fill, a one-pixel black border, and
- * rounded corners of the given radius.
+/* Fill the given image with a rectangle having a white fill, a black
+ * border, and rounded corners of the given radius.
  */
 static void drawroundedrect(SDL_Surface *image, int radius)
 {
@@ -75,7 +82,8 @@ static void drawroundedrect(SDL_Surface *image, int radius)
 	SDL_UnlockSurface(image);
 }
 
-/* Create the image of a pip with the given radius.
+/* Draw a pip with the given radius, centered on a grayscale image
+ * with the dimensions width x height.
  */
 static Uint8 *makepip(int width, int height, int radius)
 {
@@ -134,6 +142,8 @@ static void copypip(SDL_Surface *image, int xpos, int ypos,
 }
 
 /* Create the 12 faces (6 selected, 6 unselected) of a die control.
+ * The images are initially rendered on 32-bit little-endian surfaces,
+ * which are then combined and translated to the display format.
  */
 static void renderdieimages(SDL_Color bkgnd)
 {
@@ -223,5 +233,22 @@ int makedie(struct sdlcontrol *ctl, SDL_Color bkgnd)
 	renderdieimages(bkgnd);
     ctl->images = dieimages;
     ctl->state = -1;
+    ++ctlrefcount;
     return 1;
+}
+
+/* Free all resources held by this control.
+ */
+void unmakedie(struct sdlcontrol *ctl)
+{
+    int i;
+
+    ctl->images = NULL;
+    --ctlrefcount;
+    if (ctlrefcount == 0) {
+	for (i = 0 ; i < 12 ; ++i) {
+	    SDL_FreeSurface(dieimages[i]);
+	    dieimages[i] = NULL;
+	}
+    }
 }

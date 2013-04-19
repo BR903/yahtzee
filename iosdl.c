@@ -21,10 +21,9 @@
  */
 SDL_Surface *sdl_screen;
 
-/* The scaling unit. Changing this changes the size of everything
- * (except the dice, which are hardcoded images).
+/* The scaling unit. Changing this changes the size of everything.
  */
-int const sdl_scalingunit = 4;
+int sdl_scalingunit = 4;
 
 /* The color of the window's background area.
  */
@@ -78,6 +77,19 @@ static void initcontrols(void)
     }
 }
 
+/* Free all resources associated with the SDL controls.
+ */
+static void uninitcontrols(void)
+{
+    int i;
+
+    for (i = ctl_dice ; i < ctl_dice_end ; ++i)
+	unmakedie(&sdlcontrols[i]);
+    unmakebutton(&sdlcontrols[ctl_button]);
+    for (i = ctl_slots ; i < ctl_slots_end ; ++i)
+	unmakeslot(&sdlcontrols[i]);
+}
+
 /* Determine the display locations of all of the SDL controls.
  */
 static void initlayout(void)
@@ -128,6 +140,21 @@ static void initlayout(void)
     cyWindow = y + cySpacing;
 }
 
+/* Lay out the display and create an appropriately-sized screen.
+ */
+static void createscreen(void)
+{
+    initcontrols();
+    initlayout();
+    sdl_screen = SDL_SetVideoMode(cxWindow, cyWindow, 0,
+				  SDL_SWSURFACE | SDL_ANYFORMAT);
+    if (!sdl_screen)
+	croak("%s\nCannot resize display to %d x %d.",
+	      SDL_GetError(), cxWindow, cyWindow);
+    bkgndcolor = SDL_MapRGB(sdl_screen->format, bkgnd.r, bkgnd.g, bkgnd.b);
+    redrawall = 1;
+}
+
 /*
  * Exported functions.
  */
@@ -136,6 +163,7 @@ static void initlayout(void)
  */
 static void shutdown(void)
 {
+    uninitcontrols();
     if (TTF_WasInit())
 	TTF_Quit();
     if (SDL_WasInit(SDL_INIT_VIDEO))
@@ -146,27 +174,17 @@ static void shutdown(void)
  */
 int sdl_initializeio(void)
 {
-    atexit(shutdown);
     if (SDL_Init(SDL_INIT_VIDEO))
-	croak("%s\nCannot initialize SDL.", SDL_GetError());
+	return 0;
+    atexit(shutdown);
     if (TTF_Init())
 	croak("%s\nCannot initialize SDL_ttf.", TTF_GetError());
-
     sdl_screen = SDL_SetVideoMode(1, 1, 0, SDL_SWSURFACE | SDL_ANYFORMAT);
     if (!sdl_screen)
 	croak("%s\nCannot initialize display.", SDL_GetError());
-    initcontrols();
-    initlayout();
-    sdl_screen = SDL_SetVideoMode(cxWindow, cyWindow, 0,
-				  SDL_SWSURFACE | SDL_ANYFORMAT);
-    if (!sdl_screen)
-	croak("%s\nCannot resize display to %d x %d.",
-	      SDL_GetError(), cxWindow, cyWindow);
-
-    bkgndcolor = SDL_MapRGB(sdl_screen->format, bkgnd.r, bkgnd.g, bkgnd.b);
     SDL_WM_SetCaption("Yahtzee", "Yahtzee");
     SDL_EnableUNICODE(1);
-    redrawall = 1;
+    createscreen();
     return 1;
 }
 
@@ -311,41 +329,53 @@ int sdl_runio(int *control)
 	    mousetrap = -1;
 	    break;
 	  case SDL_KEYDOWN:
-	    if ((event.key.keysym.mod & KMOD_CTRL) &&
-				event.key.keysym.sym == SDLK_w)
-		return 0;
-	    if ((event.key.keysym.mod & KMOD_ALT) &&
-				event.key.keysym.sym == SDLK_F4)
-		return 0;
-	    if (event.key.keysym.sym == SDLK_RETURN ||
-				event.key.keysym.sym == SDLK_KP_ENTER) {
-		queueinputevent(ctl_button);
-		break;
-	    }
-	    if (event.key.keysym.sym == SDLK_F1 ||
-				event.key.keysym.unicode == '?') {
-		if (!runhelp())
-		    return 0;
-		redrawall = 1;
-		break;
-	    } else if ((event.key.keysym.mod & KMOD_CTRL) &&
-				event.key.keysym.sym == SDLK_k) {
-		if (!showkeyhelp(sdlcontrols))
-		    return 0;
-		redrawall = 1;
-		break;
-	    }
 	    ch = event.key.keysym.unicode;
 	    if (ch) {
 		for (i = 0 ; i < ctl_count ; ++i) {
 		    if (sdlcontrols[i].control->key == ch) {
-			if (i == ctl_button)
-			    flashcontrol(i);
 			queueinputevent(i);
 			break;
 		    }
 		}
+		if (i < ctl_count)
+		    break;
 	    }
+	    if (event.key.keysym.unicode == '\r') {
+		flashcontrol(ctl_button);
+		queueinputevent(ctl_button);
+		break;
+	    } else if (event.key.keysym.unicode == '?' ||
+				event.key.keysym.sym == SDLK_F1) {
+		if (!runhelp())
+		    return 0;
+		redrawall = 1;
+		break;
+	    } else if (event.key.keysym.unicode == '\013') {
+		if (!showkeyhelp(sdlcontrols))
+		    return 0;
+		redrawall = 1;
+		break;
+	    } else if ((event.key.keysym.mod & KMOD_CTRL) &&
+				(event.key.keysym.sym == SDLK_PLUS ||
+					event.key.keysym.sym == SDLK_EQUALS)) {
+		uninitcontrols();
+		++sdl_scalingunit;
+		createscreen();
+		break;
+	    } else if ((event.key.keysym.mod & KMOD_CTRL) &&
+				event.key.keysym.sym == SDLK_MINUS) {
+		if (sdl_scalingunit > 2) {
+		    uninitcontrols();
+		    --sdl_scalingunit;
+		    createscreen();
+		}
+		break;
+	    }
+	    if (event.key.keysym.unicode == '\030')
+		return 0;
+	    if ((event.key.keysym.mod & KMOD_ALT) &&
+				event.key.keysym.sym == SDLK_F4)
+		return 0;
 	    break;
 	  case SDL_VIDEOEXPOSE:
 	    redrawall = 1;

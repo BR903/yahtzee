@@ -9,12 +9,14 @@
 
 #include "SDL.h"
 
-#ifndef FONT_DIR
-#define FONT_DIR "/usr/share/fonts/truetype/freefont"
+/* The default locations of our fonts.
+ */
+#ifndef FONT_MEDIUM_PATH
+#define FONT_MEDIUM_PATH "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
 #endif
-
-#define FONT_PATH	FONT_DIR "/FreeSans.ttf"
-#define FONT_BOLD_PATH	FONT_DIR "/FreeSansBold.ttf"
+#ifndef FONT_BOLD_PATH
+#define FONT_BOLD_PATH "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"
+#endif
 
 struct control;
 
@@ -34,20 +36,18 @@ struct sdlcontrol {
  */
 extern SDL_Surface *sdl_screen;
 
-/* The scaling unit. Changing this changes the size of everything
- * (except the dice, which are hardcoded images).
+/* The scaling unit.
  */
-extern int const sdl_scalingunit;
+extern int sdl_scalingunit;
 
 /* The color of the window's background area.
  */
 extern SDL_Color const sdl_bkgndcolor;
 
 /* Functions to initialize a control as a specific type: a die, a
- * slot, or a button. The scalingunit is a pixel count roughly equal
- * to 1/4 the height of a line of text. In addition, slot controls
- * need to know their ID value in order to choose their label, and
- * dice controls need to know the color of the window background.
+ * slot, or a button. Slot controls need to know their ID value in
+ * order to choose their label, and dice controls need to know the
+ * color of the window background.
  */
 extern int makedie(struct sdlcontrol *ctl, SDL_Color bkgnd);
 extern int makebutton(struct sdlcontrol *ctl);
@@ -59,6 +59,12 @@ extern int makeslot(struct sdlcontrol *ctl, int slotid);
 extern int updatedie(struct sdlcontrol *ctl);
 extern int updatebutton(struct sdlcontrol *ctl);
 extern int updateslot(struct sdlcontrol *ctl);
+
+/* Functions to free resources associated with a control.
+ */
+extern void unmakedie(struct sdlcontrol *ctl);
+extern void unmakebutton(struct sdlcontrol *ctl);
+extern void unmakeslot(struct sdlcontrol *ctl);
 
 /* Functions to display online help.
  */

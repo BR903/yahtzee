@@ -18,6 +18,10 @@ enum { s_disabled, s_up, s_over, s_down, s_count };
  */
 static char const *titles[bval_count] = { "Roll Dice", "Score", "New Game" };
 
+/* Reference count for shared objects.
+ */
+static int ctlrefcount = 0;
+
 /* The button font.
  */
 static TTF_Font *font;
@@ -203,5 +207,22 @@ int makebutton(struct sdlcontrol *ctl)
     for (i = 0 ; i < bval_count ; ++i)
 	makebuttonimages(ctl, titles[i], i * s_count);
     ctl->state = -1;
+    ++ctlrefcount;
     return 1;
+}
+
+/* Free all resources held by this control.
+ */
+void unmakebutton(struct sdlcontrol *ctl)
+{
+    int i;
+
+    for (i = 0 ; i < bval_count * s_count ; ++i)
+	SDL_FreeSurface(ctl->images[i]);
+    free(ctl->images);
+    --ctlrefcount;
+    if (ctlrefcount == 0) {
+	TTF_CloseFont(font);
+	font = NULL;
+    }
 }

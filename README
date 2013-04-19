@@ -1,4 +1,4 @@
-  About Yahtzee
+  About This Program
 
 In addition to providing a simple game, this source code demonstrates
 one approach to providing a basic user interface on top of
@@ -17,18 +17,17 @@ This program depends on the ncurses library, the SDL library, and the
 SDL_ttf library. You will need to have development versions of these
 three libraries installed.
 
-If you want to leave out the SDL interface and/or the ncurses
-interface, you can edit the Makefile and comment out the indicated
-sections before building.
+If you wish to omit the SDL interface and/or the ncurses interface,
+you can edit the Makefile and comment out the indicated sections
+before building.
 
-The SDL version of the interface makes use of two FreeFont fonts. By
-default, the program looks for the TTF files in the directory
-/usr/share/fonts/truetype/freefont. If these fonts are in a different
-location on your machine, you will need to edit the value of FONT_DIR
-in the Makefile before building.
+The SDL interface requires two TrueType fonts. The Makefile attempts
+to find these fonts by running fc-match. If fc-match is not installed
+on your machine, you will need to edit the Makefile to explicitly
+supply paths to appropriate font files.
 
-There is no installation process; just copy the binary to the desired
-location.
+There is no special installation process. If you wish to install the
+binary to a shared location, just use cp(1).
 
 Send bug reports to Brian Raiter at <breadbox@muppetlabs.com>.
 

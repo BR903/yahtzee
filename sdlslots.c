@@ -29,6 +29,10 @@ static SDL_Color const bkgndcolor = { 255, 255, 255, 0 };
 static SDL_Color const textcolor = { 0, 0, 0, 0 };
 static SDL_Color const dimtextcolor = { 191, 191, 191, 0 };
 
+/* Reference count for shared objects.
+ */
+static int ctlrefcount = 0;
+
 /* The slot font.
  */
 static TTF_Font *font;
@@ -61,7 +65,7 @@ static void initfont(void)
     int w, i;
 
     fontheight = 4 * sdl_scalingunit;
-    font = TTF_OpenFont(FONT_PATH, fontheight);
+    font = TTF_OpenFont(FONT_MED_PATH, fontheight);
     if (!font)
 	croak("%s\nUnable to load font.", TTF_GetError());
 
@@ -202,5 +206,22 @@ int makeslot(struct sdlcontrol *ctl, int slotid)
     updateslotimages(ctl);
     ctl->state = -1;
     ctl->lastvalue = ctl->control->value;
+    ++ctlrefcount;
     return 1;
+}
+
+/* Free all resources held by this control.
+ */
+void unmakeslot(struct sdlcontrol *ctl)
+{
+    int i;
+
+    for (i = 0 ; i < s_count ; ++i)
+	SDL_FreeSurface(ctl->images[i]);
+    free(ctl->images);
+    --ctlrefcount;
+    if (ctlrefcount == 0) {
+	TTF_CloseFont(font);
+	font = NULL;
+    }
 }

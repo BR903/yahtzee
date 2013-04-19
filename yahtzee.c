@@ -1,4 +1,4 @@
-/* yahtzee.c: Basic game definitions.
+/* yahtzee.c: The game logic.
  *
  * Copyright (C) 2010 Brian Raiter.
  * This program is free software. See README for details.
@@ -19,6 +19,7 @@
 #define flipselected(control)	((control).flags ^= ctlflag_selected)
 #define setdisabled(control)	((control).flags |= ctlflag_disabled)
 #define cleardisabled(control)	((control).flags &= ~ctlflag_disabled)
+#define setmodified(control)	((control).flags |= ctlflag_modified)
 
 /* The array of I/O controls.
  */
@@ -38,6 +39,7 @@ static void initcontrols(void)
 	controls[i].value = -1;
 	cleardisabled(controls[i]);
 	clearselected(controls[i]);
+	clearmodified(controls[i]);
     }
 
     controls[ctl_die_0].key = 'a';
@@ -71,6 +73,7 @@ static void rollalldice(void)
 	cleardisabled(controls[i]);
 	clearselected(controls[i]);
 	controls[i].value = (int)((rand() * 6.0) / (double)RAND_MAX);
+	setmodified(controls[i]);
     }
     updateopenslots();
 }
@@ -85,6 +88,7 @@ static void rolldice(void)
 	if (isselected(controls[i])) {
 	    clearselected(controls[i]);
 	    controls[i].value = (int)((rand() * 6.0) / (double)RAND_MAX);
+	    setmodified(controls[i]);
 	}
     }
     updateopenslots();
@@ -92,7 +96,7 @@ static void rolldice(void)
 
 /* Mark the dice as fixed.
  */
-static void fixdice(void)
+static void freezedice(void)
 {
     int i;
 
@@ -122,7 +126,10 @@ static void clearallslots(void)
 
 /* Run a single session of the game. Returns true if the game ran to
  * completion, or false if the user quit. This function embodies the
- * game's state machine.
+ * game's state machine. Each iteration of the main loop has three
+ * stages: one, update the controls to indicate the game's current
+ * state; two, retrieve input from the user; and three, apply the
+ * user's action to the game state.
  */
 static int playgame(void)
 {
@@ -134,8 +141,6 @@ static int playgame(void)
     clearallslots();
     rollalldice();
     rollcount = 1;
-    controls[ctl_button].value = bval_roll;
-    setdisabled(controls[ctl_button]);
 
     for (;;) {
 	selectedslot = 0;
@@ -157,14 +162,14 @@ static int playgame(void)
 	    else
 		setdisabled(controls[ctl_button]);
 	    if (rollcount == 3)
-		fixdice();
+		freezedice();
 	} else {
 	    controls[ctl_button].value = bval_roll;
 	    setdisabled(controls[ctl_button]);
 	    for (i = ctl_dice ; i < ctl_dice_end ; ++i)
 		if (isselected(controls[i]))
 		    cleardisabled(controls[ctl_button]);
-	}    
+	}
 
 	getnextevent:
 	if (rollcount == 3 && slotopencount == 1) {
@@ -192,23 +197,25 @@ static int playgame(void)
 	    flipselected(*control);
 	    if (selectedslot) {
 		clearselected(*selectedslot);
+		setmodified(*selectedslot);
 		updatescores();
 	    }
 	    continue;
 	}
-
 	if (ctl >= ctl_slots && ctl < ctl_slots_end) {
 	    if (isdisabled(*control))
 		goto getnextevent;
 	    setselected(*control);
-	    if (selectedslot)
+	    setmodified(*control);
+	    if (selectedslot) {
 		clearselected(*selectedslot);
+		setmodified(*selectedslot);
+	    }
 	    for (i = ctl_dice ; i < ctl_dice_end ; ++i)
 		clearselected(controls[i]);
 	    updatescores();
 	    continue;
 	}
-
 	if (ctl == ctl_button) {
 	    if (control->value == bval_score) {
 		if (!selectedslot) {
@@ -217,6 +224,7 @@ static int playgame(void)
 		}
 		setdisabled(*selectedslot);
 		clearselected(*selectedslot);
+		setmodified(*selectedslot);
 		if (slotopencount > 1) {
 		    rollalldice();
 		    rollcount = 1;
@@ -257,6 +265,30 @@ static int newgame(void)
  * main().
  */
 
+/* Select an interface to initialize depending on compiler settings
+ * and the user environment.
+ */
+static void initui(void)
+{
+#if defined INCLUDE_SDL
+#if defined unix
+    if (!getenv("DISPLAY"))
+	goto skipsdl;
+#endif
+    if (initializeio(io_sdl))
+	return;
+    skipsdl:
+#endif
+#if defined INCLUDE_CURSES
+    if (getenv("TERM"))
+	if (initializeio(io_curses))
+	    return;
+#endif
+    initializeio(io_text);
+}
+
+/* Run the program.
+ */
 int main(int argc, char *argv[])
 {
     int i;
@@ -274,18 +306,7 @@ int main(int argc, char *argv[])
     srand(time(0));
     initcontrols();
     initscoring();
-
-#if defined INCLUDE_SDL
-    if (getenv("DISPLAY"))
-	initializeio(io_sdl);
-    else
-#endif
-#if defined INCLUDE_CURSES
-    if (getenv("TERM"))
-	initializeio(io_curses);
-    else
-#endif
-	initializeio(io_text);
+    initui();
 
     while (playgame() && newgame()) ;
     return 0;

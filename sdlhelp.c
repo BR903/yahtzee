@@ -188,7 +188,8 @@ static void writehelptext(void)
 	"If the left side scores 63 or more points, a bonus of 35 points"
 	" is awarded.",
 	" ",
-	"Press Ctrl-W to exit the program.",
+	"Press Ctrl-X to exit the program.",
+	"Press Ctrl-+ and Ctrl-\xE2\x80\x93 to resize the window.",
 	"Press Ctrl-K to view the keyboard shortcuts.",
 	"Press ? or F1 to view this help text again.",
 	" "
@@ -196,7 +197,7 @@ static void writehelptext(void)
 
     int i, y;
 
-    initfont(FONT_PATH, sdl_scalingunit * 3);
+    initfont(FONT_MED_PATH, sdl_scalingunit * 3);
     SDL_FillRect(sdl_screen, NULL, 
 		 SDL_MapRGB(sdl_screen->format,
 			    bkgndcolor.r, bkgndcolor.g, bkgndcolor.b));
@@ -225,7 +226,7 @@ static int getkey(void)
 	else if (event.type == SDL_MOUSEBUTTONDOWN)
 	    return 1;
 	else if (event.type == SDL_KEYDOWN && event.key.keysym.unicode) {
-	    return event.key.keysym.unicode != '\027';
+	    return event.key.keysym.unicode != '\021';
 	}
     }
 }
