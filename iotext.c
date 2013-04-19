@@ -158,9 +158,9 @@ static void showprompt(void)
 
 /* Display online help.
  */
-static int runhelp(void)
+static void showhelp(void)
 {
-    printf("%s%s%s%s%s",
+    printf("%s%s%s%s",
 	   "   Each turn begins with a roll of the dice. Select which dice\n"
 	   "to re-roll by entering the corresponding letters (a), (b), (c),\n"
 	   "(d), and/or (e). Two re-rolls are permitted per turn. After\n"
@@ -174,39 +174,17 @@ static int runhelp(void)
 	   "points is awarded.\n",
 	   "   At any time you can type (q) to exit the program, (.) to\n"
 	   "re-display the game state, (v) to see the version information,\n"
-	   "or (?) to view this help text again.\n",
-	   "Press (RET) to return to the game.\n");
-    for (;;) {
-	switch (getchar()) {
-	  case '\n':
-	    return 1;
-	  case 'Q':
-	  case 'q':
-	  case EOF:
-	    return 0;
-	}
-    }
+	   "or (?) to view this help text again.\n");
 }
 
 /* Display version information.
  */
-static int showversion(void)
+static void showversion(void)
 {
     int i;
 
     for (i = 0 ; versioninfo[i] ; ++i)
 	printf("   %s\n", versioninfo[i]);
-    printf("Press (RET) to return to the game.\n");
-    for (;;) {
-	switch (getchar()) {
-	  case '\n':
-	    return 1;
-	  case 'Q':
-	  case 'q':
-	  case EOF:
-	    return 0;
-	}
-    }
 }
 
 /* Process a line of user input. Determine if the input corresponds to
@@ -333,16 +311,18 @@ int text_runio(int *control)
 	    continue;
 	}
 	if (*buf == '?') {
-	    if (!runhelp())
-		return 0;
+	    showhelp();
+	    displayscore = 0;
+	    displaydice = 0;
 	    continue;
 	}
 	if (tolower(*buf) == 'v') {
-	    if (!showversion())
-		return 0;
+	    showversion();
+	    displayscore = 0;
+	    displaydice = 0;
 	    continue;
 	}
 	if (!processinput(buf, n))
-	    putchar('\a');
+	    fputc('\a', stderr);
     }
 }
