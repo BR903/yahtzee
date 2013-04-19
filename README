@@ -22,14 +22,16 @@ you can edit the Makefile and comment out the indicated sections
 before building.
 
 The SDL interface requires two TrueType fonts. The Makefile attempts
-to find these fonts by running fc-match. If fc-match is not installed
-on your machine, you will need to edit the Makefile to explicitly
-supply paths to appropriate font files.
+to find these fonts by running fc-match(1). If fc-match is not
+installed on your machine, you will need to edit the Makefile to
+explicitly supply paths to appropriate font files.
 
 There is no special installation process. If you wish to install the
 binary to a shared location, just use cp(1).
 
 Send bug reports to Brian Raiter at <breadbox@muppetlabs.com>.
+
+URL: <http://www.muppetlabs.com/~breadbox/software/yahtzee.html>.
 
 
   License
