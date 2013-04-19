@@ -1,0 +1,53 @@
+  About Yahtzee
+
+In addition to providing a simple game, this source code demonstrates
+one approach to providing a basic user interface on top of
+general-purpose I/O libraries. This program includes both a graphical
+interface via SDL and a terminal interface via ncurses.
+
+
+  Building and Installing
+
+To build, simply run make.
+
+This program depends on the ncurses library, the SDL library, and the
+SDL_ttf library. You will need to have development versions of these
+three libraries installed.
+
+If you want to build a version that only uses ncurses, or a version
+that only uses SDL, you can edit the Makefile and comment out the
+indicated sections before building.
+
+The SDL version of the interface makes use of two FreeFont fonts. By
+default, the program looks for the TTF files in the directory
+/usr/share/fonts/truetype/freefont. If these fonts are in a different
+location on your machine, edit the value of FONT_DIR in the Makefile
+before building.
+
+There is no installation process; just copy the binary to the desired
+location.
+
+Send bug reports to Brian Raiter at <breadbox@muppetlabs.com>.
+
+
+  License
+
+This program is copyright (C) 2010 Brian Raiter.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
