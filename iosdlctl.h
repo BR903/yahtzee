@@ -9,10 +9,11 @@
 
 #include "SDL.h"
 
-/* The default locations of our fonts.
+/* The default locations of our fonts. Normally the location is
+ * supplied in the Makefile via the compiler command-line.
  */
-#ifndef FONT_MEDIUM_PATH
-#define FONT_MEDIUM_PATH "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+#ifndef FONT_MED_PATH
+#define FONT_MED_PATH "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
 #endif
 #ifndef FONT_BOLD_PATH
 #define FONT_BOLD_PATH "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"

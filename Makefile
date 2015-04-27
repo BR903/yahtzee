@@ -1,12 +1,16 @@
 # Makefile for yahtzee
 
-# Definitions for the game logic, and the dumb terminal interface.
+# Definitions for the basic game logic.
 
 CC = gcc
 CFLAGS = -Wall -Wextra -Os
 LDFLAGS = -Wall -Wextra -s
 LOADLIBES =
-OBJLIST = yahtzee.o gen.o scoring.o io.o iotext.o
+OBJLIST = yahtzee.o gen.o scoring.o io.o
+
+# Definitions for the dumb terminal interface.
+
+OBJLIST += iotext.o
 
 # Definitions for the curses interface.
 # Comment out this section to remove curses support.
