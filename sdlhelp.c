@@ -70,7 +70,7 @@ static void makekeys(SDL_Surface *keys[], struct sdlcontrol const *sdlcontrols)
 
     SDL_Surface *image;
     SDL_Rect rect;
-    int key, w, i;
+    int key, i;
 
     for (i = 0 ; i < ctl_count ; ++i) {
 	key = toupper(sdlcontrols[i].control->key);
@@ -79,24 +79,23 @@ static void makekeys(SDL_Surface *keys[], struct sdlcontrol const *sdlcontrols)
 	    continue;
 	}
 	if (key == ' ') {
-	    TTF_SizeUTF8(font, "space", &w, NULL);
-	    w += keywidth;
-	    keys[i] = SDL_CreateRGBSurface(SDL_SWSURFACE, w, keyheight,
+	    image = TTF_RenderUTF8_Shaded(font, "space",
+					  keytextcolor, keycolor);
+	    keys[i] = SDL_CreateRGBSurface(SDL_SWSURFACE,
+					   image->w + keywidth, keyheight,
 					   sdl_screen->format->BitsPerPixel,
 					   sdl_screen->format->Rmask,
 					   sdl_screen->format->Gmask,
 					   sdl_screen->format->Bmask,
 					   sdl_screen->format->Amask);
-	    image = TTF_RenderUTF8_Shaded(font, "space",
-					  keytextcolor, keycolor);
 	} else {
+	    image = TTF_RenderGlyph_Shaded(font, key, keytextcolor, keycolor);
 	    keys[i] = SDL_CreateRGBSurface(SDL_SWSURFACE, keywidth, keyheight,
 					   sdl_screen->format->BitsPerPixel,
 					   sdl_screen->format->Rmask,
 					   sdl_screen->format->Gmask,
 					   sdl_screen->format->Bmask,
 					   sdl_screen->format->Amask);
-	    image = TTF_RenderGlyph_Shaded(font, key, keytextcolor, keycolor);
 	}
 	SDL_FillRect(keys[i], NULL,
 		     SDL_MapRGB(keys[i]->format,
