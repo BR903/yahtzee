@@ -8,15 +8,15 @@
 #define _gen_h_
 
 /* Null-terminated array of lines of text, giving the program's
- * version number and license.
+ * version number, copyright, and license.
  */
-extern char const *versioninfo[];
+extern char const *licenseinfo[];
 
-/* Display an error message and exit the program.
+/* Display a formatted error message and exit the program.
  */
 extern void croak(char const *fmt, ...);
 
-/* Wrapper around malloc that croaks if memory is unavailable.
+/* Wrapper around malloc that aborts if memory is unavailable.
  */
 extern void *allocate(unsigned int size);
 

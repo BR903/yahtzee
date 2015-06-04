@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include "yahtzee.h"
 #include "gen.h"
@@ -291,16 +292,27 @@ static void initui(void)
  */
 int main(int argc, char *argv[])
 {
+    static char const *yowzitch =
+	"Usage: yahtzee             to play the game.\n"
+	"       yahtzee --help      to display this help.\n"
+	"       yahtzee --version   to display version and license.\n\n"
+	"While the game is running, press ? or F1 for assistance.\n";
+
     int i;
 
-    (void)argv;
+    if (argc == 2) {
+	if (!strcmp(argv[1], "--help")) {
+	    fputs(yowzitch, stdout);
+	    return 0;
+	} else if (!strcmp(argv[1], "--version")) {
+	    for (i = 0 ; licenseinfo[i] ; ++i)
+		puts(licenseinfo[i]);
+	    return 0;
+	}
+    }
     if (argc > 1) {
-	puts("Usage: yahtzee\n"
-	     "This program takes no command-line arguments.\n"
-	     "While the game is running, press ? or F1 for assistance.\n");
-	for (i = 0 ; versioninfo[i] ; ++i)
-	    puts(versioninfo[i]);
-	return 0;
+	fputs(yowzitch, stderr);
+	return EXIT_FAILURE;
     }
 
     srand(time(0));

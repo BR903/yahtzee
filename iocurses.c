@@ -20,29 +20,9 @@
  */
 enum { a_normal, a_dim, a_marked, a_selected, a_overlay, a_count };
 
-/* The ASCII-graphic renderings of the die faces.
+/* The levels of non-ASCII characters that can be used.
  */
-static char const *dielines[5][6] = {
-    {" ------- "," ------- "," ------- "," ------- "," ------- "," ------- "},
-    {"|       |","|     o |","|     o |","| o   o |","| o   o |","| o   o |"},
-    {"|   o   |","|       |","|   o   |","|       |","|   o   |","| o   o |"},
-    {"|       |","| o     |","| o     |","| o   o |","| o   o |","| o   o |"},
-    {" ------- "," ------- "," ------- "," ------- "," ------- "," ------- "}
-};
-
-/* The text of the button labels.
- */
-static char const *buttontext[bval_count] = { 
-    "Roll Dice", "  Score  ", "Try Again"
-};
-
-/* The labels on each of the scoring slots.
- */
-static char const *slottext[ctl_slots_count] = {
-    "Ones", "Twos", "Threes", "Fours", "Fives", "Sixes", "Subtotal",
-    "Bonus", "Three of a Kind", "Four of a Kind", "Full House",
-    "Small Straight", "Large Straight", "Yahtzee", "Chance", "Total Score"
-};
+enum { specials_none, specials_outlines, specials_all, specials_count };
 
 /* The sizes of the various controls on the display.
  */
@@ -65,6 +45,10 @@ static chtype attrs[a_count];
 /* The size of the display.
  */
 static int cxScreen, cyScreen;
+
+/* Which of three possible renderings of the dice to use.
+ */
+static int usespecials;
 
 /*
  * The I/O functions.
@@ -93,10 +77,63 @@ static void initlayout(void)
     ySlots = yButton + 2;
 }
 
+/* Render a die using character graphics. There are three renderings,
+ * depending on the value of usespecials. With specials_none, only
+ * standard ASCII characters are used. With specials_outlines, the
+ * VT100 line-drawing characters replace the dashes and pipe
+ * charaters. With specials_all, the VT100 bullet character is also
+ * used to draw the pips.
+ */
+static void drawacsdie(int y, int x, int v)
+{
+    static char const *dielines[5] = {
+	",-------.,-------.,-------.,-------.,-------.,-------.",
+	"|       ||     o ||     o || o   o || o   o || o   o |",
+	"|   o   ||       ||   o   ||       ||   o   || o   o |",
+	"|       || o     || o     || o   o || o   o || o   o |",
+	"`-------'`-------'`-------'`-------'`-------'`-------'"
+    };
+
+    chtype ulc, urc, llc, lrc, hl, vl, pip;
+    int i, n;
+
+    hl = usespecials ? ACS_HLINE : '-';
+    vl = usespecials ? ACS_VLINE : '|';
+    ulc = usespecials ? ACS_ULCORNER : ' ';
+    urc = usespecials ? ACS_URCORNER : ' ';
+    llc = usespecials ? ACS_LLCORNER : ' ';
+    lrc = usespecials ? ACS_LRCORNER : ' ';
+    pip = usespecials == specials_all ? ACS_BULLET : 'o';
+    for (n = 0 ; n < cyDie ; ++n) {
+	move(y + n, x);
+	for (i = 0 ; i < cxDie ; ++i) {
+	    switch (dielines[n][v * cxDie + i]) {
+	      case ',':		addch(ulc);			break;
+	      case '.':		addch(urc);			break;
+	      case '`':		addch(llc);			break;
+	      case '\'':	addch(lrc);			break;
+	      case '-':		addch(hl);			break;
+	      case '|':		addch(vl);			break;
+	      case 'o':		addch(pip);			break;
+	      default:		addch(' ');			break;
+	    }
+	}
+    }
+}
+
 /* Update the display.
  */
 static void render(void)
 {
+    static char const *buttontext[bval_count] = { 
+	"Roll Dice", "  Score  ", "  Again  "
+    };
+    static char const *slottext[ctl_slots_count] = {
+	"Ones", "Twos", "Threes", "Fours", "Fives", "Sixes", "Subtotal",
+	"Bonus", "Three of a Kind", "Four of a Kind", "Full House",
+	"Small Straight", "Large Straight", "Yahtzee", "Chance", "Total Score"
+    };
+
     char const *text;
     int i, n, x;
 
@@ -108,8 +145,7 @@ static void render(void)
     for (i = ctl_dice ; i < ctl_dice_end ; ++i) {
 	if (isselected(controls[i]))
 	    aset(a_marked);
-	for (n = 0 ; n < cyDie ; ++n)
-	    mvaddstr(yDice + n, x, dielines[n][controls[i].value]);
+	drawacsdie(yDice, x, controls[i].value);
 	if (isselected(controls[i]))
 	    aset(a_normal);
 	x += cxDie + cxDieSpacing;
@@ -184,6 +220,33 @@ static int runruleshelp(void)
     mvaddstr(0, xDice + 4, "Rules of the Game");
     for (i = 0 ; helptext[i] ; ++i)
 	mvaddstr(2 + i, xDice - 1, helptext[i]);
+    move(cyScreen - 1, 0);
+    refresh();
+
+    for (;;) {
+	switch (getch()) {
+	  case '\003':
+	  case '\030':
+	    return 0;
+	  default:
+	    render();
+	    return 1;
+	}
+    }
+}
+
+/* Temporarily display the license and wait for a keypress.
+ */
+static int runlicensedisplay(void)
+{
+    int i;
+
+    erase();
+    mvaddstr(0, xDice + 4, "Copyright and License");
+    for (i = 0 ; licenseinfo[i] ; ++i)
+	mvaddstr(2 + i, 4, licenseinfo[i]);
+    move(cyScreen - 1, 0);
+    refresh();
 
     for (;;) {
 	switch (getch()) {
@@ -213,8 +276,6 @@ static int runhelp(void)
     }
     mvaddstr(yButton - 1, xDice - 1, "Use (space) or (return)");
     mvaddstr(yButton, xDice + 1, "to push the button:");
-    mvaddstr(yButton - 1, xDice + cxDice - 11, "Use (ctrl X)");
-    mvaddstr(yButton, xDice + cxDice - 9, "to exit.");
     mvaddstr(ySlots - 1, xDice - 1,
 	     "Use these keys to select a scoring slot:");
     i = ctl_slots;
@@ -226,10 +287,12 @@ static int runhelp(void)
 	x += cxSlot + cxSlotSpacing;
     }
     y = ySlots + cySlots;
-    mvaddstr(y, xDice - 1, "Use (?) or (F1) to view this help again.");
-    mvaddstr(y + 1, xDice - 1, "Use (ctrl R) to view the rules.");
-    for (i = 0 ; versioninfo[i] ; ++i)
-	mvaddstr(y + i + 3, xDice - 1, versioninfo[i]);
+    mvaddstr(y + 0, xDice - 1, "(ctrl A) changes how the dice are drawn.");
+    mvaddstr(y + 1, xDice - 1, "Use (?) or (F1) to view this help again.");
+    mvaddstr(y + 2, xDice - 1, "Use (ctrl R) to view the rules.");
+    mvaddstr(y + 3, xDice - 1,
+	     "Use (ctrl V) to see version and license information.");
+    mvaddstr(y + 5, xDice + cxDice - 33, "Use (ctrl X) to exit the program.");
     aset(a_normal);
     move(cyScreen - 1, 0);
     refresh();
@@ -241,6 +304,9 @@ static int runhelp(void)
 	    return 0;
 	  case '\022':
 	    return runruleshelp();
+	    break;
+	  case '\026':
+	    return runlicensedisplay();
 	    break;
 	  default:
 	    render();
@@ -352,6 +418,13 @@ int curses_runio(int *control)
 	    if (!runruleshelp())
 		return 0;
 	    break;
+	  case '\026':
+	    if (!runlicensedisplay())
+		return 0;
+	    break;
+	  case '\001':
+	    usespecials = (usespecials + 1) % specials_count;
+	    break;
 	  case '\f':
 	    clearok(stdscr, TRUE);
 	    break;
@@ -361,6 +434,11 @@ int curses_runio(int *control)
 	  case '\003':
 	  case '\030':
 	    return 0;
+	  case 'q':
+	  case '\033':
+	    if (controls[ctl_button].value == bval_newgame)
+		return 0;
+	    break;
 	  case ERR:
 	    exit(1);
 	  default:

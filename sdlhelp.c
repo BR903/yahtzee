@@ -203,8 +203,8 @@ static void writehelptext(void)
     y = TTF_FontLineSkip(font) / 2;
     for (i = 0 ; i < (int)(sizeof helptext / sizeof *helptext) ; ++i)
 	y = writetext(sdl_screen, helptext[i], y);
-    for (i = 0 ; versioninfo[i] ; ++i)
-	y = writetext(sdl_screen, versioninfo[i], y);
+    for (i = 0 ; licenseinfo[i] ; ++i)
+	y = writetext(sdl_screen, licenseinfo[i], y);
     SDL_UpdateRect(sdl_screen, 0, 0, 0, 0);
     TTF_CloseFont(font);
     font = NULL;

@@ -173,18 +173,18 @@ static void showhelp(void)
 	   "   If the left side scores 63 or more points, a bonus of 35\n"
 	   "points is awarded.\n",
 	   "   At any time you can type (q) to exit the program, (.) to\n"
-	   "re-display the game state, (v) to see the version information,\n"
-	   "or (?) to view this help text again.\n");
+	   "re-display the game state, (v) to see the version and license\n"
+	   "information, or (?) to view this help text again.\n");
 }
 
-/* Display version information.
+/* Display version and license information.
  */
 static void showversion(void)
 {
     int i;
 
-    for (i = 0 ; versioninfo[i] ; ++i)
-	printf("   %s\n", versioninfo[i]);
+    for (i = 0 ; licenseinfo[i] ; ++i)
+	printf("   %s\n", licenseinfo[i]);
 }
 
 /* Process a line of user input. Determine if the input corresponds to
