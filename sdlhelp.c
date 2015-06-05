@@ -24,6 +24,26 @@ static TTF_Font *font;
  */
 static int keywidth, keyheight;
 
+/* Wait for an input event. Returns false if the input event was an
+ * attempt to exit the program.
+ */
+static int getkey(void)
+{
+    SDL_Event event;
+
+    for (;;) {
+	if (SDL_WaitEvent(&event) < 0)
+	    exit(1);
+	if (event.type == SDL_QUIT)
+	    return 0;
+	else if (event.type == SDL_MOUSEBUTTONDOWN)
+	    return 1;
+	else if (event.type == SDL_KEYDOWN && event.key.keysym.unicode) {
+	    return event.key.keysym.unicode != '\030';
+	}
+    }
+}
+
 /* Load the font and get some dimensions.
  */
 static void initfont(char const *path, int fontheight)
@@ -169,31 +189,11 @@ static int writetext(SDL_Surface *surface, char const *text, int y)
     return rect.y;
 }
 
-/* Display the online help text to the screen.
+/* Display several lines of text (terminated with a null pointer) and
+ * wait for a keypress before returning.
  */
-static void writehelptext(void)
+static int displaytext(char const *lines[])
 {
-    static char const *helptext[] = {
-	"Each turn begins with a roll of the dice. Select which dice to"
-	" re-roll and push the Roll Dice button. Two re-rolls are permitted"
-	" per turn. After re-rolling, choose where to score the dice and push"
-	" the Score button.",
-	" ",
-	"A full house is worth 25 points, a small straight (four dice)"
-	" scores 30 points, a large straight (five dice) scores 40 points,"
-	" and yahtzee scores 50 points. Three of a kind, four of a kind,"
-	" and chance score the total of all five dice.",
-	" ",
-	"If the left side scores 63 or more points, a bonus of 35 points"
-	" is awarded.",
-	" ",
-	"Press Ctrl-X to exit the program.",
-	"Press Ctrl-+ and Ctrl-\xE2\x80\x93 to resize the window.",
-	"Press Ctrl-K to view the keyboard shortcuts.",
-	"Press ? or F1 to view this help text again.",
-	" "
-    };
-
     int i, y;
 
     initfont(FONT_MED_PATH, sdl_scalingunit * 3);
@@ -201,41 +201,41 @@ static void writehelptext(void)
 		 SDL_MapRGB(sdl_screen->format,
 			    bkgndcolor.r, bkgndcolor.g, bkgndcolor.b));
     y = TTF_FontLineSkip(font) / 2;
-    for (i = 0 ; i < (int)(sizeof helptext / sizeof *helptext) ; ++i)
-	y = writetext(sdl_screen, helptext[i], y);
-    for (i = 0 ; licenseinfo[i] ; ++i)
-	y = writetext(sdl_screen, licenseinfo[i], y);
+    for (i = 0 ; lines[i] ; ++i)
+	y = writetext(sdl_screen, *lines[i] ? lines[i] : " ", y);
     SDL_UpdateRect(sdl_screen, 0, 0, 0, 0);
     TTF_CloseFont(font);
     font = NULL;
-}
-
-/* Wait for an input event. Returns false if the input event was an
- * attempt to exit the program.
- */
-static int getkey(void)
-{
-    SDL_Event event;
-
-    for (;;) {
-	if (SDL_WaitEvent(&event) < 0)
-	    exit(1);
-	if (event.type == SDL_QUIT)
-	    return 0;
-	else if (event.type == SDL_MOUSEBUTTONDOWN)
-	    return 1;
-	else if (event.type == SDL_KEYDOWN && event.key.keysym.unicode) {
-	    return event.key.keysym.unicode != '\021';
-	}
-    }
+    return getkey();
 }
 
 /* Temporarily display the online help text.
  */
 int runhelp(void)
 {
-    writehelptext();
-    return getkey();
+    static char const *helptext[] = {
+	"Each turn begins with a roll of the dice. Select which dice to"
+	" re-roll and push the Roll Dice button. Two re-rolls are permitted"
+	" per turn. After re-rolling, choose where to score the dice and push"
+	" the Score button.",
+	"",
+	"A full house is worth 25 points, a small straight (four dice)"
+	" scores 30 points, a large straight (five dice) scores 40 points,"
+	" and yahtzee scores 50 points. Three of a kind, four of a kind,"
+	" and chance score the total of all five dice.",
+	"",
+	"If the left side scores 63 or more points, a bonus of 35 points"
+	" is awarded.",
+	"",
+	"Press Ctrl-+ and Ctrl-\xE2\x80\x93 to resize the window.",
+	"Press ? or F1 to view this help text again.",
+	"Press Ctrl-K to view the keyboard shortcuts.",
+	"Press Ctrl-V to view the version and license information.",
+	"Press Ctrl-X to exit the program.",
+	NULL
+    };
+
+    return displaytext(helptext);
 }
 
 /* Temporarily display the hot key assignments.
@@ -244,4 +244,11 @@ int showkeyhelp(struct sdlcontrol const *sdlcontrols)
 {
     drawkeys(sdlcontrols);
     return getkey();
+}
+
+/* Temporarily display the license text.
+ */
+int showlicense(void)
+{
+    return displaytext(licenseinfo);
 }

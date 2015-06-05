@@ -71,5 +71,6 @@ extern void unmakeslot(struct sdlcontrol *ctl);
  */
 extern int runhelp(void);
 extern int showkeyhelp(struct sdlcontrol const *sdlcontrols);
+extern int showlicense(void);
 
 #endif

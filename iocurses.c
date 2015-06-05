@@ -242,9 +242,8 @@ static int runlicensedisplay(void)
     int i;
 
     erase();
-    mvaddstr(0, xDice + 4, "Copyright and License");
     for (i = 0 ; licenseinfo[i] ; ++i)
-	mvaddstr(2 + i, 4, licenseinfo[i]);
+	mvaddstr(i, 4, licenseinfo[i]);
     move(cyScreen - 1, 0);
     refresh();
 

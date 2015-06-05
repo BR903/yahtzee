@@ -355,6 +355,11 @@ int sdl_runio(int *control)
 		    return 0;
 		redrawall = 1;
 		break;
+	    } else if (event.key.keysym.unicode == '\026') {
+		if (!showlicense())
+		    return 0;
+		redrawall = 1;
+		break;
 	    } else if ((event.key.keysym.mod & KMOD_CTRL) &&
 				(event.key.keysym.sym == SDLK_PLUS ||
 					event.key.keysym.sym == SDLK_EQUALS)) {
