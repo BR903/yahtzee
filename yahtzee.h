@@ -69,4 +69,14 @@ struct control {
  */
 extern struct control controls[ctl_count];
 
+/* Null-terminated array of paragraphs, giving the program's version
+ * number, copyright, and license.
+ */
+extern char const *licenseinfo[];
+
+/* Null-terminated array of paragraphs describing the rules of the
+ * game.
+ */
+extern char const *rulesinfo[];
+
 #endif

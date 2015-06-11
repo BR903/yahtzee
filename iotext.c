@@ -160,19 +160,19 @@ static void showprompt(void)
  */
 static void showhelp(void)
 {
-    printf("%s%s%s%s",
-	   "   Each turn begins with a roll of the dice. Select which dice\n"
-	   "to re-roll by entering the corresponding letters (a), (b), (c),\n"
-	   "(d), and/or (e). Two re-rolls are permitted per turn. After\n"
-	   "re-rolling, choose where to score the dice by entering the\n"
-	   "letter or number for that line on the score sheet.\n",
-	   "   A full house is worth 25 points, a small straight (four\n"
-	   "dice) scores 30 points, a large straight (five dice) scores 40\n"
-	   "points, and yahtzee scores 50 points. Three of a kind, four of\n"
-	   "a kind, and chance score the total of all five dice.\n",
-	   "   If the left side scores 63 or more points, a bonus of 35\n"
-	   "points is awarded.\n",
-	   "   At any time you can type (q) to exit the program, (.) to\n"
+    char const *line;
+    int i, n;
+
+    for (i = 0 ; rulesinfo[i] ; ++i) {
+	line = rulesinfo[i];
+	while (*line) {
+	    n = textbreak(&line, 72);
+	    printf("%.*s\n", n, line);
+	    line += n;
+	}
+    }
+    printf("\n%s",
+	   "At any time you can type (q) to exit the program, (.) to\n"
 	   "re-display the game state, (v) to see the version and license\n"
 	   "information, or (?) to view this help text again.\n");
 }
@@ -181,10 +181,17 @@ static void showhelp(void)
  */
 static void showversion(void)
 {
-    int i;
+    char const *line;
+    int i, n;
 
-    for (i = 0 ; licenseinfo[i] ; ++i)
-	printf("   %s\n", licenseinfo[i]);
+    for (i = 0 ; licenseinfo[i] ; ++i) {
+	line = licenseinfo[i];
+	while (*line) {
+	    n = textbreak(&line, 64);
+	    printf("%.*s\n", n, line);
+	    line += n;
+	}
+    }
 }
 
 /* Process a line of user input. Determine if the input corresponds to

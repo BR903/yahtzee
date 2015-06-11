@@ -26,6 +26,53 @@
  */
 struct control controls[ctl_count];
 
+/* Version, copyright, and license text.
+ */
+char const *licenseinfo[] = {
+    "yahtzee: version 1.5. Copyright (C) 2010 Brian Raiter.",
+    " ",
+    "Permission is hereby granted, free of charge, to any person obtaining"
+    " a copy of this software and associated documentation files (the"
+    " \"Software\"), to deal in the Software without restriction, including"
+    " without limitation the rights to use, copy, modify, merge, publish,"
+    " distribute, sublicense, and/or sell copies of the Software, and to"
+    " permit persons to whom the Software is furnished to do so, subject to"
+    " the following conditions:",
+    " ",
+    "The above copyright notice and this permission notice shall be included"
+    " in all copies or substantial portions of the Software.",
+    " ",
+    "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS"
+    " OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF"
+    " MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT."
+    " IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+    " CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,"
+    " TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE"
+    " SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.",
+    NULL
+};
+
+/* Text describing the rules of the game.
+ */
+char const *rulesinfo[] = {
+    "Each turn begins with a roll of the dice. Select which dice to re-roll"
+    " and the others will remain unchanged. Two re-rolls are permitted per"
+    " turn, after which you must choose which category to score the dice in.",
+    " ",
+    "On the left side, each category only scores the dice showing the"
+    " category's number. If the total of all categories on the left side"
+    " scores 63 or more points, a bonus of 35 points is awarded.",
+    " ",
+    "A full house is worth 25 points, a small straight (four dice)"
+    " scores 30 points, a large straight (five dice) scores 40 points."
+    " Yahtzee (five of a kind) scores 50 points. Three of a kind, four of a"
+    " kind, and chance (no requirements) score the total of all five dice.",
+    " ",
+    "Every category must be scored exactly once. If you score the dice for a"
+    " category that they do not qualify for, that category will score zero.",
+    NULL
+};
+
 /*
  * I/O control management.
  */
@@ -288,6 +335,21 @@ static void initui(void)
     initializeio(io_text);
 }
 
+static void printtext(char const *lines[])
+{
+    char const *line;
+    int i, n;
+
+    for (i = 0 ; lines[i] ; ++i) {
+	line = lines[i];
+	while (*line) {
+	    n = textbreak(&line, 72);
+	    printf("%.*s\n", n, line);
+	    line += n;
+	}
+    }
+}
+
 /* Run the program.
  */
 int main(int argc, char *argv[])
@@ -295,18 +357,20 @@ int main(int argc, char *argv[])
     static char const *yowzitch =
 	"Usage: yahtzee             to play the game.\n"
 	"       yahtzee --help      to display this help.\n"
-	"       yahtzee --version   to display version and license.\n\n"
+	"       yahtzee --version   to display version and license.\n"
+	"       yahtzee --rules     to display rules of the game.\n"
+	"\n"
 	"While the game is running, press ? or F1 for assistance.\n";
-
-    int i;
 
     if (argc == 2) {
 	if (!strcmp(argv[1], "--help")) {
 	    fputs(yowzitch, stdout);
 	    return 0;
 	} else if (!strcmp(argv[1], "--version")) {
-	    for (i = 0 ; licenseinfo[i] ; ++i)
-		puts(licenseinfo[i]);
+	    printtext(licenseinfo);
+	    return 0;
+	} else if (!strcmp(argv[1], "--rules")) {
+	    printtext(rulesinfo);
 	    return 0;
 	}
     }

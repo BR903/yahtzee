@@ -200,34 +200,25 @@ static void render(void)
     refresh();
 }
 
-/* Temporarily display text describing the rules of the game and wait
- * for a keypress.
+/* Temporarily display some text and wait for a keypress.
  */
-static int runruleshelp(void)
+static int runtextdisplay(char const *title, char const *lines[])
 {
-    static char const *helptext[] = {
-	"Each turn begins with a roll of the dice. Select which dice to",
-	"re-roll and push the Roll Dice button. Two re-rolls are",
-	"permitted per turn. After re-rolling, choose where to score",
-	"the dice and push the Score button.",
-	"",
-	"A full house is worth 25 points, a small straight (four dice)",
-	"scores 30 points, a large straight (five dice) scores 40",
-	"points, and yahtzee scores 50 points. Three of a kind, four of",
-	"a kind, and chance score the total of all five dice.",
-	"",
-	"If the left side scores 63 or more points, a bonus of 35",
-	"points is awarded.",
-	"",
-	NULL
-    };
-
-    int i;
+    char const *line;
+    int y, i, n;
 
     erase();
-    mvaddstr(0, xDice + 4, "Rules of the Game");
-    for (i = 0 ; helptext[i] ; ++i)
-	mvaddstr(2 + i, xDice - 1, helptext[i]);
+    mvaddstr(0, xDice + 4, title);
+    y = 2;
+    for (i = 0 ; lines[i] ; ++i) {
+	line = lines[i];
+	while (*line) {
+	    n = textbreak(&line, 72);
+	    mvaddnstr(y, 4, line, n);
+	    ++y;
+	    line += n;
+	}
+    }
     move(cyScreen - 1, 0);
     refresh();
 
@@ -243,28 +234,19 @@ static int runruleshelp(void)
     }
 }
 
+/* Temporarily display text describing the rules of the game and wait
+ * for a keypress.
+ */
+static int runruleshelp(void)
+{
+    return runtextdisplay("Rules of the Game", rulesinfo);
+}
+
 /* Temporarily display the license and wait for a keypress.
  */
 static int runlicensedisplay(void)
 {
-    int i;
-
-    erase();
-    for (i = 0 ; licenseinfo[i] ; ++i)
-	mvaddstr(i, 4, licenseinfo[i]);
-    move(cyScreen - 1, 0);
-    refresh();
-
-    for (;;) {
-	switch (getch()) {
-	  case '\003':
-	  case '\030':
-	    return 0;
-	  default:
-	    render();
-	    return 1;
-	}
-    }
+    return runtextdisplay("Version and License", licenseinfo);
 }
 
 /* Temporarily overlay text describing the key commands and wait for a

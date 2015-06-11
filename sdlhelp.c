@@ -128,29 +128,6 @@ static void makekeys(SDL_Surface *keys[], struct sdlcontrol const *sdlcontrols)
     }
 }
 
-/* Render each of the key graphics next to its associated control.
- */
-static void drawkeys(struct sdlcontrol const *sdlcontrols)
-{
-    SDL_Surface *keys[ctl_count];
-    SDL_Rect rect;
-    int i;
-
-    initfont(FONT_BOLD_PATH, sdl_scalingunit * 4);
-    makekeys(keys, sdlcontrols);
-    for (i = 0 ; i < ctl_count ; ++i) {
-	if (!keys[i])
-	    continue;
-	rect.x = sdlcontrols[i].rect.x + 4;
-	rect.y = sdlcontrols[i].rect.y - 4;
-	SDL_BlitSurface(keys[i], NULL, sdl_screen, &rect);
-	SDL_FreeSurface(keys[i]);
-    }
-    SDL_UpdateRect(sdl_screen, 0, 0, 0, 0);
-    TTF_CloseFont(font);
-    font = NULL;
-}
-
 /* Render a paragraph of text to the given surface, starting at the
  * given y-coordinate and breaking on whitespace as necessary. Returns
  * the y-coordinate just below the last line rendered.
@@ -214,19 +191,6 @@ static int displaytext(char const *lines[])
 int runhelp(void)
 {
     static char const *helptext[] = {
-	"Each turn begins with a roll of the dice. Select which dice to"
-	" re-roll and push the Roll Dice button. Two re-rolls are permitted"
-	" per turn. After re-rolling, choose where to score the dice and push"
-	" the Score button.",
-	"",
-	"A full house is worth 25 points, a small straight (four dice)"
-	" scores 30 points, a large straight (five dice) scores 40 points,"
-	" and yahtzee scores 50 points. Three of a kind, four of a kind,"
-	" and chance score the total of all five dice.",
-	"",
-	"If the left side scores 63 or more points, a bonus of 35 points"
-	" is awarded.",
-	"",
 	"Press Ctrl-+ and Ctrl-\xE2\x80\x93 to resize the window.",
 	"Press ? or F1 to view this help text again.",
 	"Press Ctrl-K to view the keyboard shortcuts.",
@@ -235,20 +199,66 @@ int runhelp(void)
 	NULL
     };
 
-    return displaytext(helptext);
-}
+    int i, y;
 
-/* Temporarily display the hot key assignments.
- */
-int showkeyhelp(struct sdlcontrol const *sdlcontrols)
-{
-    drawkeys(sdlcontrols);
+    initfont(FONT_MED_PATH, sdl_scalingunit * 3);
+    SDL_FillRect(sdl_screen, NULL, 
+		 SDL_MapRGB(sdl_screen->format,
+			    bkgndcolor.r, bkgndcolor.g, bkgndcolor.b));
+    y = TTF_FontLineSkip(font) / 2;
+    for (i = 0 ; rulesinfo[i] ; ++i)
+	y = writetext(sdl_screen, rulesinfo[i], y);
+    y += TTF_FontLineSkip(font);
+    for (i = 0 ; helptext[i] ; ++i)
+	y = writetext(sdl_screen, helptext[i], y);
+    SDL_UpdateRect(sdl_screen, 0, 0, 0, 0);
+    TTF_CloseFont(font);
+    font = NULL;
     return getkey();
+
+    return displaytext(helptext);
 }
 
 /* Temporarily display the license text.
  */
 int showlicense(void)
 {
-    return displaytext(licenseinfo);
+    int i, y;
+
+    initfont(FONT_MED_PATH, sdl_scalingunit * 3);
+    SDL_FillRect(sdl_screen, NULL, 
+		 SDL_MapRGB(sdl_screen->format,
+			    bkgndcolor.r, bkgndcolor.g, bkgndcolor.b));
+    y = TTF_FontLineSkip(font) / 2;
+    for (i = 0 ; licenseinfo[i] ; ++i)
+	y = writetext(sdl_screen, licenseinfo[i], y);
+    SDL_UpdateRect(sdl_screen, 0, 0, 0, 0);
+    TTF_CloseFont(font);
+    font = NULL;
+    return getkey();
+}
+
+/* Temporarily render each of the key graphics next to its associated
+ * control.
+ */
+int showkeyhelp(struct sdlcontrol const *sdlcontrols)
+{
+    SDL_Surface *keys[ctl_count];
+    SDL_Rect rect;
+    int i;
+
+    initfont(FONT_BOLD_PATH, sdl_scalingunit * 4);
+    makekeys(keys, sdlcontrols);
+    for (i = 0 ; i < ctl_count ; ++i) {
+	if (!keys[i])
+	    continue;
+	rect.x = sdlcontrols[i].rect.x + 4;
+	rect.y = sdlcontrols[i].rect.y - 4;
+	SDL_BlitSurface(keys[i], NULL, sdl_screen, &rect);
+	SDL_FreeSurface(keys[i]);
+    }
+    SDL_UpdateRect(sdl_screen, 0, 0, 0, 0);
+    TTF_CloseFont(font);
+    font = NULL;
+    return getkey();
 }

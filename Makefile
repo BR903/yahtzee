@@ -2,9 +2,9 @@
 
 # Definitions for the basic game logic.
 
-CC = gcc
-CFLAGS = -Wall -Wextra -Os
-LDFLAGS = -Wall -Wextra -s
+CC = gcc -ggdb
+CFLAGS = -Wall -Wextra
+LDFLAGS = -Wall -Wextra 
 LOADLIBES =
 OBJLIST = yahtzee.o gen.o scoring.o io.o
 
