@@ -20,10 +20,6 @@
  */
 enum { a_normal, a_dim, a_marked, a_selected, a_overlay, a_count };
 
-/* The levels of non-ASCII characters that can be used.
- */
-enum { specials_none, specials_outlines, specials_all, specials_count };
-
 /* The sizes of the various controls on the display.
  */
 static int const cxDie = 9, cyDie = 5, cxDieSpacing = 2;
@@ -31,6 +27,16 @@ static int const cxDice = 9 * 5 + 2 * 4;
 static int const cxButton = 13;
 static int const cxSlot = 20, cySlots = 8, cxSlotSpacing = 7;
 static int const cxSlots = 20 * 2 + 7;
+
+/* The layouts for the ASCII-art die faces.
+ */
+static char const *diepatterns[] = {
+    "422222225422222225422222225422222225422222225422222225",
+    "300000003300000103300000103301000103301000103301000103",
+    "300010003300000003300010003300000003300010003301000103",
+    "300000003301000003301000003301000103301000103301000103",
+    "622222227622222227622222227622222227622222227622222227"
+};
 
 /* The placement of the various controls on the display.
  */
@@ -46,9 +52,9 @@ static chtype attrs[a_count];
  */
 static int cxScreen, cyScreen;
 
-/* Which of three possible renderings of the dice to use.
+/* The actual set of characters used to render the die faces.
  */
-static int usespecials;
+static chtype diechars[8];
 
 /*
  * The I/O functions.
@@ -77,47 +83,49 @@ static void initlayout(void)
     ySlots = yButton + 2;
 }
 
-/* Render a die using character graphics. There are three renderings,
- * depending on the value of usespecials. With specials_none, only
- * standard ASCII characters are used. With specials_outlines, the
- * VT100 line-drawing characters replace the dashes and pipe
- * charaters. With specials_all, the VT100 bullet character is also
- * used to draw the pips.
+/* Select a set of characters for rendering dice. There are three
+ * possible renderings. The first, which is the default, uses only
+ * standard ASCII characters. In the second set, VT100 line-drawing
+ * characters replace the dashes and pipe charaters. The last set also
+ * uses the VT100 bullet character to draw the pips.
+ */
+static void changediechars(int advance)
+{
+    static int which = 0;
+
+    which = (which + advance) % 3;
+    switch (which) {
+      case 0:
+	diechars[0] = ' ';		diechars[4] = ' ';
+	diechars[1] = 'o';		diechars[5] = ' ';
+	diechars[2] = '-';		diechars[6] = ' ';
+	diechars[3] = '|';		diechars[7] = ' ';
+	break;
+      case 1:
+	diechars[0] = ' ';		diechars[4] = ACS_ULCORNER;
+	diechars[1] = 'o';		diechars[5] = ACS_URCORNER;
+	diechars[2] = ACS_HLINE;	diechars[6] = ACS_LLCORNER;
+	diechars[3] = ACS_VLINE;	diechars[7] = ACS_LRCORNER;
+	break;
+      case 2:
+	diechars[0] = ' ';		diechars[4] = ACS_ULCORNER;
+	diechars[1] = ACS_BULLET;	diechars[5] = ACS_URCORNER;
+	diechars[2] = ACS_HLINE;	diechars[6] = ACS_LLCORNER;
+	diechars[3] = ACS_VLINE;	diechars[7] = ACS_LRCORNER;
+	break;
+    }
+}
+
+/* Render a die using the current set of character graphics.
  */
 static void drawacsdie(int y, int x, int v)
 {
-    static char const *dielines[5] = {
-	",-------.,-------.,-------.,-------.,-------.,-------.",
-	"|       ||     o ||     o || o   o || o   o || o   o |",
-	"|   o   ||       ||   o   ||       ||   o   || o   o |",
-	"|       || o     || o     || o   o || o   o || o   o |",
-	"`-------'`-------'`-------'`-------'`-------'`-------'"
-    };
+    int i, j;
 
-    chtype ulc, urc, llc, lrc, hl, vl, pip;
-    int i, n;
-
-    hl = usespecials ? ACS_HLINE : '-';
-    vl = usespecials ? ACS_VLINE : '|';
-    ulc = usespecials ? ACS_ULCORNER : ' ';
-    urc = usespecials ? ACS_URCORNER : ' ';
-    llc = usespecials ? ACS_LLCORNER : ' ';
-    lrc = usespecials ? ACS_LRCORNER : ' ';
-    pip = usespecials == specials_all ? ACS_BULLET : 'o';
-    for (n = 0 ; n < cyDie ; ++n) {
-	move(y + n, x);
-	for (i = 0 ; i < cxDie ; ++i) {
-	    switch (dielines[n][v * cxDie + i]) {
-	      case ',':		addch(ulc);			break;
-	      case '.':		addch(urc);			break;
-	      case '`':		addch(llc);			break;
-	      case '\'':	addch(lrc);			break;
-	      case '-':		addch(hl);			break;
-	      case '|':		addch(vl);			break;
-	      case 'o':		addch(pip);			break;
-	      default:		addch(' ');			break;
-	    }
-	}
+    for (j = 0 ; j < cyDie ; ++j) {
+	move(y + j, x);
+	for (i = 0 ; i < cxDie ; ++i)
+	    addch(diechars[diepatterns[j][v * cxDie + i] - '0']);
     }
 }
 
@@ -386,6 +394,7 @@ int curses_initializeio(void)
 	attrs[a_selected] = A_STANDOUT;
 	attrs[a_overlay] = A_BOLD;
     }
+    changediechars(0);
     return 1;
 }
 
@@ -422,7 +431,7 @@ int curses_runio(int *control)
 		return 0;
 	    break;
 	  case '\001':
-	    usespecials = (usespecials + 1) % specials_count;
+	    changediechars(+1);
 	    break;
 	  case '\f':
 	    clearok(stdscr, TRUE);
