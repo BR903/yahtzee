@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VER=`sed -n 's/.*: version \([0-9]*\(\.[0-9]*\)\).*/\1/p' gen.c`
+VER=`sed -n 's/.*: version \([0-9][0-9.]*[0-9a-z]\).*/\1/p' yahtzee.c`
 DIR=yahtzee-$VER
 DIST=yahtzee-$VER.tar.gz
 

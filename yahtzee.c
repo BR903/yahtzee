@@ -29,7 +29,7 @@ struct control controls[ctl_count];
 /* Version, copyright, and license text.
  */
 char const *licenseinfo[] = {
-    "yahtzee: version 1.5. Copyright (C) 2010 Brian Raiter.",
+    "yahtzee: version 1.6. Copyright (C) 2010 Brian Raiter.",
     " ",
     "Permission is hereby granted, free of charge, to any person obtaining"
     " a copy of this software and associated documentation files (the"
