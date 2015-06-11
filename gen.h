@@ -15,8 +15,9 @@ extern void croak(char const *fmt, ...);
  */
 extern void *allocate(unsigned int size);
 
-/* Return the longest prefix of str that fits in width bytes while
- * breaking at a space (if possible).
+/* Return the longest prefix of a string that fits in width bytes
+ * while breaking at a space (if possible). The string pointer stored
+ * at pstr will be automatically advanced past any leading spaces.
  */
 extern int textbreak(char const **pstr, int width);
 

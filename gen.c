@@ -35,7 +35,8 @@ void *allocate(unsigned int size)
     return p;
 }
 
-/* Find the next place to break a word-wrapped string of text.
+/* Find the next place to break a word-wrapped string of text,
+ * automatically skipping leading whitespace.
  */
 int textbreak(char const **pstr, int width)
 {
