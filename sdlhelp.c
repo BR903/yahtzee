@@ -160,9 +160,11 @@ static int writetext(SDL_Surface *surface, char const *text, int y)
 	}
 	image = TTF_RenderUTF8_Shaded(font, buf, textcolor, bkgndcolor);
 	SDL_BlitSurface(image, NULL, surface, &rect);
+	SDL_FreeSurface(image);
 	rect.y += TTF_FontLineSkip(font);
 	pos += n + 1;
     }
+    free(buf);
     return rect.y;
 }
 
